@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        h1{
+            color:blue;
+        }
+        /* title속성이 있는 요소들 */
+        [title]{
+            color:darkblue;
+            background-color: yellow;
+        }
+
+
+        /* *********************** */
+        
+        /* title 속성이 있는 p 요소들 */
+        p[title] {
+            border:5px solid;
+        }
+
+        /* h1을 조상으로둔 title 속성이 있는 요소들 */
+        h1 [title]{
+            border:5px dotted;
+        }
+        /* ************************************* */
+
+
+
+    </style>
+</head>
+<body>
+    <h1 title = "hellow">Lorem, ipsum.</h1>
+    <h1>Esse,<span title=""inside">이건 또 뭐여</span> totam.</h1>
+    <h1 title = "what?">Consectetur, magnam.</h1>
+    <h1>Velit, est.</h1>
+    <h1>Beatae, ratione?</h1>
+    
+    <h1>
+        <p title = "hellow">이거만 바뀌나</p>
+    </h1>
+</body>
+</html>
