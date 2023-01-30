@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+
+<head>
+  <style>
+    h1{
+        color:blue;
+    }
+    /* note 클래스를 가진 p 엘리먼트 에만 적용 */
+    p.note{
+        background-color: yellow;
+    }
+    /* 선택자를 띄워쓰기 없이 연속 작성 */
+    /* 모든 조건을 만족하는 요소 선택 */
+
+    p.error.note{
+        border:5px solid;
+    }
+    h1.black.terror{
+        border:10px dotted black;
+    }
+    h1.note.error{
+        border:3px solid;
+    }
+  </style>
+
+
+</head>
+
+<body>
+    <!-- h1.note*3>lorem2^p.note.error*3>lorem3 -->
+
+    <h1 class="note">Lorem, ipsum.</h1>
+    <h1 class="note">Voluptates, soluta?</h1>
+    <h1 class="note">Dolores, ad.</h1>
+    <p class="note error">Lorem, ipsum dolor.</p>
+    <p class="note error">Numquam, quidem dolorum?</p>
+    <p class="note error">Expedita, quaerat quos.</p>
+    <h1 class = "black terror">Lorem, ipsum dolor.</h1>
+    <h1 class ="note error">Lorem, ife.</h1>
+    
+</body>
+</html>

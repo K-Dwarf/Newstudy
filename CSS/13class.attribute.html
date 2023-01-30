@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+
+<head>
+    <style>
+        .delete{
+            color:blue;
+            text-decoration:underline;
+        }
+        .note{
+            color: yellow;
+            background-color: black;
+        }
+        .error{
+            background-color: gray;
+            color:red;
+        }
+  </style>
+</head>
+<body>
+    <!-- class 속성은 영문,숫자,_,-조합으로 작성 -->
+    <!-- 같은 이름 중복 가능 , 셀렉터는 .class명 으로 지정한다-->
+
+
+    <!-- 하나의 요소는 빈칸으로 구분해서 여러 클래스를 가질 수 있음 -->
+    <h1 class ="error delete note"> 한 요소에 여러 요소 설정 가능</h1>
+    <!-- 여기서 글의 색상 color 속성은 여러 클래스를 적용 했을때 같은종류의 속성이 겹친다면 마지막 선언한 클래스의 속성이 나머지 속성을 덮어서
+    마지막의 클래스 속성으로 나타낸다 -->
+
+    <!-- h1*10>lorem2 -->
+    <h1 class="note">Lorem, ipsum.</h1>
+    <h1 class = "note">Ut, animi.</h1>
+    <h1 class = "error">Distinctio, deleniti.</h1>
+    <h1 class ="delete">Dicta, alias!</h1>
+    <h1 class = "delete">Id, similique!</h1>
+    <h1 class = "delete">Officia, tempore.</h1>
+    <h1 class = "error">Repellendus, doloremque.</h1>
+    <h1>Totam, sunt!</h1>
+    <h1 class ="error">Laborum, quas.</h1>
+    <h1 class = "note">Architecto, soluta.</h1>
+</body>
+</html>

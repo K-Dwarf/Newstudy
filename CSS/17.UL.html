@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+
+<head>   
+    <style>
+        li{
+            text-decoration: underline;
+           
+            
+        }
+        /*  > 자식선택자 */
+        
+        /* 부모요소가 ul인 li을 찾아서 설정 */
+        ul>li{
+            color:blue;
+        }
+        
+        /* 부모요소가 클래스 todo인 li을 찾아서 설정 */
+        .todo>li{
+            color:red;
+            background-color: black;
+        }
+    </style>
+</head>
+
+
+<body>
+    <ul class = "babo">
+        <li>Lorem.</li>
+        <li>Quae!</li>
+        <li>Veniam!</li>
+    </ul>
+
+    <ul class = "todo">
+     
+        <li>Lorem.</li>
+        <li>Inventore.</li>
+        <li>Sapiente!</li>
+    </ul>    
+</body>
+
+
+</html>
