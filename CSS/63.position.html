@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        h1{
+            background-color: yellow;
+        }
+        h1:nth-child(odd){
+            background-color: gray;
+        }
+
+        #head1{
+            /* 기본값 */
+            /* 위치변경 할 수 없으므로 포지션 요소로 안봄 */
+            position:static;
+            left:50px;
+        }
+        #head2{
+            /* relative : 원래 기준으로 포지션 변경 가능 */
+            position:relative;
+            left:50px;
+        }
+        #head3{
+            /* 원래 위치 기준 위로  */
+            position:relative;  
+            bottom:50px;
+        }
+
+        #head4{
+            position:absolute;
+            bottom:30px;
+
+        }
+        #head6{
+            position:relative;
+            left:600px;
+        }
+        #head7:hover{
+            position: relative;
+            top:50px;
+        }
+
+
+
+    </style>
+
+</head>
+
+
+<body>
+    <!-- h1#head$*7>lorem3 -->
+    <h1 id="head1">
+        Lorem, ipsum dolor.
+    </h1>
+    <h1 id="head2">
+        Excepturi, soluta minima?
+    </h1>
+    <h1 id="head3">
+        Hic, atque quos.
+    </h1>
+    <h1 id="head4">
+        Deleniti, veritatis hic.
+    </h1>
+    <h1 id="head5">
+        In, eaque quia?
+    </h1>
+    <h1 id="head6">
+       6번째 헤드
+    </h1>
+    <h1 id="head7">
+        Ab, accusantium quo!
+    </h1>
+    
+</body>
+</html>

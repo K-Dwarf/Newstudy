@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+            /* z-index의 값이 클수록 눈에서 가까워짐 */
+            /* z-index: */
+
+        h1{
+            width:100px;
+            height: 60px;
+            border:10px solid black;
+            background-color: yellow;
+            position:absolute;
+        }
+
+        #head1{
+            top:0px;
+        }
+        #head2{
+            top:36px;
+            left:20px;
+
+        }
+        #head3{
+            top:72px;
+            left:60px;
+        }
+        #head4{
+            top:144px;
+            left:120px;
+            z-index:10;
+        }
+        #head5{
+            top:180px;
+            left:180px;
+            z-index:5;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- h1#head$*5{$} -->
+    <h1 id="head1">1</h1>
+    <h1 id="head2">2</h1>
+    <h1 id="head3">3</h1>
+    <h1 id="head4">4</h1>
+    <h1 id="head5">5</h1>
+</body>
+</html>
