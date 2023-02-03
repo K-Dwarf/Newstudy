@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css" integrity="sha512-SbiR/eusphKoMVVXysTKG/7VseWii+Y3FdHrt0EpKgpToZeemhqHeZeLWLhJutz/2ut2Vw1uQEj2MbRF+TVBUA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+    </style>
+
+</head>
+
+<body>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js" integrity="sha512-1/RvZTcCDEUjY/CypiMz+iqqtaoQfAITmNSJY17Myp4Ms5mdxPS5UV7iOfdZoxcGhzFbOm6sntTKJppjvuhg4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        var a = 3;
+        let b = 4;
+        const c = 5;
+        d = 7;//선언 없이 사용가능하지만 금지
+
+        //     var : 함수 스코프(function scope)를 갖는 변수이며, 함수 내에서 선언된 변수는 함수 외부에서도 접근이 가능합니다.
+
+        // let : 블록 스코프(block scope)를 갖는 변수이며, 블록 내에서 선언된 변수는 블록 외부에서는 접근이 불가능합니다.
+        function varFunction() {
+            var a = 10;
+            if (true) {
+                var a = 20;
+                console.log(a); // 20
+            }
+            console.log(a); // 20
+        }
+
+        function letFunction() {
+            let a = 10;
+            if (true) {
+                let a = 20;
+                console.log(a); // 20
+            }
+            console.log(a); // 10
+        }
+
+
+    </script>
+</body>
+
+</html>
