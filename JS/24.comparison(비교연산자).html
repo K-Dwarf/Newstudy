@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css" integrity="sha512-SbiR/eusphKoMVVXysTKG/7VseWii+Y3FdHrt0EpKgpToZeemhqHeZeLWLhJutz/2ut2Vw1uQEj2MbRF+TVBUA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+    </style>
+
+</head>
+
+<body>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js" integrity="sha512-1/RvZTcCDEUjY/CypiMz+iqqtaoQfAITmNSJY17Myp4Ms5mdxPS5UV7iOfdZoxcGhzFbOm6sntTKJppjvuhg4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+    // 비교 연산자
+    // 두항을 비교한 결과(bloolean)
+    // ==(값), ===(type까지 같은가) !=, < , <= , > , >=
+    
+    // == 값이 같으면 (true) 다르면 (false)
+
+    let a = 3;
+    let b = 5;
+
+    let c = a == b;
+    console.log(c); // false
+
+    let d = a + 2 == b;
+    console.log(d); //true
+
+let e = "front"
+
+console.log(e == "java");
+console.log(e == 'java');
+console.log(e == `front`);
+
+let f = 33;
+let g = "33";
+console.log(f == g); //true  값만 같으면 true
+console.log(f === g); //false (type 이 다르기에 false)
+
+// === 값과 타입이 같아야 true 값 or 타입이 다르면 false
+// 고로 value and type 비교
+
+// != 값이 같지 않으면 true 값이 같으면 false
+
+let i = 10;
+let j = 11;
+
+console.log(i != j); // 값이 다른게 true 이므로 true 출력
+
+console.log(i != 10); //false
+
+let v = "10"
+// 값이 같지 않거나 타입이 같지 않으면 true
+console.log(v !== 10); // 값은 같으나 타입이 달라서 true
+
+console.log(v >= 9);
+    </script>
+</body>
+</html>
