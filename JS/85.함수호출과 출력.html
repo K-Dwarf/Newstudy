@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css" integrity="sha512-SbiR/eusphKoMVVXysTKG/7VseWii+Y3FdHrt0EpKgpToZeemhqHeZeLWLhJutz/2ut2Vw1uQEj2MbRF+TVBUA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+    </style>
+
+</head>
+
+<body>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js" integrity="sha512-1/RvZTcCDEUjY/CypiMz+iqqtaoQfAITmNSJY17Myp4Ms5mdxPS5UV7iOfdZoxcGhzFbOm6sntTKJppjvuhg4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+    
+        // 값으로 반환 가능
+        // 함수를 return 할때 주의
+
+        // return 함수 와 return 함수() 의 차이
+        // return 함수는 function b 자체를
+        // return 함수()는 b 안의 코드를 리턴한다
+        function a() {
+            console.log("리턴 안한 a안의 코드");
+            function b() {
+                console.log("리턴값으로 보낼 b안의 함수");
+                
+            }
+            return b();
+        }
+
+        // return b() 를 해버리면
+        
+        // a() 를 실행할 때 
+        // b()함수를 바로 실행해버리기 때문에 c 변수에
+        // b() 함수의 값이 저장되지 않음
+        // let c = a(); -> c(); 실행 불가 대신 -> c; 를 사용
+        
+        // c 변수에 a()
+
+        
+
+
+        
+        let c = a();// a의 리턴값
+
+        c;// 함수 a() 호출
+
+        c();// 함수 a를 실행, 그 값이 함수일경우 해당 함수 실행
+
+        // a();//a함수를 호출하는 코드
+
+        // a()();//a()함수를 실행하고 
+        // 그 결과가 함수일경우 해당 함수를 실행
+
+
+        // console.log(a());
+        // a() 함수를 호출하고 그 결과값을 
+        // console.log 로 출력하는 코드
+        // 
+    
+        
+        
+
+
+        // function q(){
+            
+        //         console.log("실행");
+            
+        // }
+        
+       
+
+        // q();// 함수를 호출하는것
+
+        // console.log(q()); // 함수의 리턴값을 출력
+        //그러나 리턴해주는게 없으므로 undefined 
+
+        
+
+    </script>
+</body>
+</html>
