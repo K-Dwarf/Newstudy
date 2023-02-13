@@ -11,33 +11,35 @@
 </head>
 
 <body>
-    <!-- input#input1+ul#list1 -->
 
-    <input type="text" id="input1">
-    <ul id="list1"></ul>
+    <h1 id="h1">
+        Lorem, ipsum.
+        <p id="p1" style="display: none;">
+            Lorem ipsum dolor sit amet.
+        </p>
+    </h1>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js" integrity="sha512-i9cEfJwUwViEPFKdC1enz4ZRGBj8YQo6QByFTF92YXHi7waCqyexvRD75S5NVTsSiTv7rKWqG9Y5eFxmRsOn0A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.3/jquery.min.js" integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        // jquery
 
-        $("#input2").keyup(function(e){
-            if(e.key ==="Enter") {
-                $("#list2").append(`<li>${$(this).val()},/li>`);
-            }
+        //h1 요소에 마우스 포인터 들어가면
+        // p요소가 보이게
+        // h1 요소에서 마우스 포인터 떠나면
+        // p 요소가 숨겨지게
+
+
+        $("#h1").hover(function () {
+            $("#p1").slideDown();
+            
+        }, function() {
+            $("#p1").slideUp();
         });
 
 
 
-        //보통의 자바스크립트 코드 (vanilla javascript)
-        document.querySelector("#input1").addEventListener("keyup", function (e) {
-            if (e.key === "Enter") {
-                let li = document.createElement("li");
-                li.textContent = this.value;
-                document.querySelector("#list1").append(li);
-                this.value = "";
-            }
-        });
+
+
     </script>
 </body>
 
