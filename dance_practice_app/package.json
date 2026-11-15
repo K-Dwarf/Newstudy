@@ -1,0 +1,16 @@
+{
+  "name": "christmas-dance-practice",
+  "productName": "ChristmasDancePractice",
+  "version": "1.0.0",
+  "description": "Christmas dance practice player for kids: YouTube/MP4, mirror mode, speed, A-B loop with countdown, section bookmarks.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-packager . ChristmasDancePractice --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/README"
+  },
+  "devDependencies": {
+    "@electron/packager": "18.3.6",
+    "electron": "33.2.1"
+  }
+}
