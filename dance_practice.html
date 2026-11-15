@@ -59,6 +59,13 @@ header.top h1 span { color: var(--gold); }
   border-radius: 10px;
   background: var(--bg);
 }
+@media (max-width: 700px) {
+  header.top h1 { font-size: 22px; }
+  .source { justify-content: stretch; }
+  .source input[type="text"] { flex-basis: 100%; max-width: none; }
+  .source .btn { flex: 1; }
+  .row-label { min-width: 100%; }
+}
 .saved { font-size: 15px; color: var(--green); opacity: 0; transition: opacity .3s; white-space: nowrap; align-self: center; }
 .saved.on { opacity: 1; }
 
@@ -269,7 +276,7 @@ select.form-select { width: 100%; height: 52px; padding: 0 10px; border: 2px sol
 </header>
 
 <div class="notice" id="fileNotice" hidden>
-  <p>이 파일을 더블클릭해서 열면 유튜브 영상이 재생되지 않을 수 있어요(유튜브 오류 153). 그럴 땐 <b>MP4 파일 열기</b>를 쓰거나, VS Code의 Live Server 같은 로컬 웹서버로 열어 주세요.</p>
+  <p>파일을 직접 열어서(다운로드 폴더, 더블클릭 등) 유튜브 영상이 재생되지 않을 수 있어요(유튜브 오류 153). 그럴 땐 <b>MP4 파일 열기</b>를 쓰거나, 웹 주소(https://...)로 올린 페이지에서 열어 주세요.</p>
   <button class="icon-btn" id="noticeClose" type="button" aria-label="안내 닫기">×</button>
 </div>
 
@@ -1063,7 +1070,7 @@ select.form-select { width: 100%; height: 52px; padding: 0 10px; border: 2px sol
   }
 
   /* ---------- start ---------- */
-  if (location.protocol === 'file:') $('#fileNotice').hidden = false;
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') $('#fileNotice').hidden = false;
   $('#ytUrl').value = S.lastUrl || DEFAULT_URL;
   renderAll();
   pendingId = parseYouTubeId(S.lastUrl) || parseYouTubeId(DEFAULT_URL);
