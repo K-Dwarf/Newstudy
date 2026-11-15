@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>크리스마스 댄스 연습</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">
+<style>
+/* Layout: video + big controls on the left, tabbed section/formation panel on the right; stacks to one column on narrow screens */
+:root {
+  --bg: #0a0e15;
+  --panel: #141b27;
+  --panel-2: #1c2535;
+  --line: #2f3c52;
+  --fg: #f5f8fc;
+  --muted: #a7b4c7;
+  --gold: #ffd23f;
+  --red: #ff5964;
+  --green: #3ee28a;
+  --blue: #5cb8ff;
+  --font: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.45;
+  min-height: 100vh;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+header.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+header.top h1 { margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.01em; }
+header.top h1 span { color: var(--gold); }
+.source { display: flex; flex-wrap: wrap; gap: 10px; flex: 1; min-width: 0; justify-content: flex-end; }
+.source input[type="text"] {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 560px;
+  height: 52px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.saved { font-size: 15px; color: var(--green); opacity: 0; transition: opacity .3s; white-space: nowrap; align-self: center; }
+.saved.on { opacity: 1; }
+
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 12px 20px 0;
+  padding: 12px 16px;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  background: #2a2410;
+  font-size: 16px;
+}
+.notice p { margin: 0; flex: 1; }
+
+main.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 460px;
+  gap: 20px;
+  padding: 16px 20px 28px;
+}
+@media (max-width: 1150px) { main.app { grid-template-columns: minmax(0, 1fr); } }
+
+/* Video */
+.video-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 64vh;
+  margin: 0 auto;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+#mirrorTarget { position: absolute; inset: 0; transition: transform .25s ease; }
+#mirrorTarget.mirrored { transform: scaleX(-1); }
+#mirrorTarget iframe, #mirrorTarget video, #mirrorTarget #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+#mirrorTarget video { object-fit: contain; background: #000; }
+#mirrorTarget[data-mode="yt"] video { display: none; }
+#mirrorTarget[data-mode="mp4"] #yt { display: none; }
+.click-catch { position: absolute; inset: 0; cursor: pointer; }
+.mirror-badge {
+  position: absolute; top: 12px; left: 12px;
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--blue); color: #001528; font-weight: 900; font-size: 16px;
+  pointer-events: none;
+}
+.player-msg {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(90%, 640px);
+  padding: 18px 22px; border-radius: 12px;
+  background: rgba(10, 14, 21, .92); border: 2px solid var(--red);
+  text-align: center; font-size: 19px;
+}
+.countdown {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .55);
+  pointer-events: none;
+}
+.countdown .num {
+  font-size: clamp(120px, 22vw, 260px); font-weight: 900; line-height: 1;
+  color: var(--gold); text-shadow: 0 6px 30px rgba(0, 0, 0, .6);
+  animation: pop .9s ease-out;
+}
+.countdown .label { font-size: clamp(24px, 3vw, 40px); font-weight: 700; margin-top: 8px; }
+@keyframes pop { from { transform: scale(1.5); opacity: .2; } to { transform: scale(1); opacity: 1; } }
+
+/* Timeline */
+.timeline { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.time-label { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar { position: relative; flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; }
+.bar input[type="range"] { width: 100%; height: 44px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; position: relative; z-index: 2; }
+.bar input[type="range"]::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+.bar input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -9px; border-radius: 50%; background: var(--fg); border: 4px solid var(--gold); }
+.bar input[type="range"]::-moz-range-track { height: 12px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+.bar input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--fg); border: 4px solid var(--gold); }
+.markers { position: absolute; left: 14px; right: 14px; top: 0; bottom: 0; pointer-events: none; z-index: 1; }
+.markers .ab-range { position: absolute; top: 15px; height: 14px; background: rgba(255, 210, 63, .35); border-radius: 4px; }
+.markers .tick { position: absolute; top: 8px; width: 2px; height: 28px; background: var(--muted); opacity: .6; }
+.markers .pin { position: absolute; top: -2px; transform: translateX(-50%); font-size: 13px; font-weight: 900; padding: 0 5px; border-radius: 4px; color: #111; }
+.markers .pin.a { background: var(--gold); }
+.markers .pin.b { background: var(--red); }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.row-label { font-size: 16px; color: var(--muted); font-weight: 700; min-width: 74px; }
+.btn {
+  min-height: 58px;
+  padding: 0 20px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform .08s, background .15s;
+}
+.btn:hover { background: #26324a; }
+.btn:active { transform: scale(.97); }
+.btn.big { min-width: 190px; font-size: 24px; background: var(--gold); border-color: var(--gold); color: #111; }
+.btn.big:hover { background: #ffe07a; }
+.btn.on { background: var(--blue); border-color: var(--blue); color: #001528; }
+.btn.rate.on { background: var(--gold); border-color: var(--gold); color: #111; }
+.btn.loop.on { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.small { min-height: 44px; padding: 0 14px; font-size: 16px; }
+.btn.danger:hover { border-color: var(--red); }
+.btn .sub { display: block; font-size: 14px; font-weight: 400; color: inherit; opacity: .8; margin-top: -2px; }
+.btn.ab { min-width: 130px; line-height: 1.2; padding-block: 6px; }
+.rate-note { font-size: 16px; color: var(--gold); }
+.hint { font-size: 16px; color: var(--muted); }
+kbd { display: inline-block; padding: 1px 8px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; background: var(--panel-2); color: var(--fg); font-family: inherit; font-size: 15px; }
+
+/* Side panel */
+aside.side { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; min-width: 0; max-height: calc(100vh - 120px); position: sticky; top: 16px; }
+@media (max-width: 1150px) { aside.side { max-height: none; position: static; } }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+.tab { min-height: 60px; border: 0; background: transparent; font-size: 21px; font-weight: 700; color: var(--muted); border-bottom: 4px solid transparent; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--gold); }
+.panel { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.progress-count { font-size: 17px; font-weight: 700; color: var(--green); }
+
+.sec { border: 2px solid var(--line); border-radius: 12px; padding: 12px; background: var(--panel-2); display: flex; flex-direction: column; gap: 10px; }
+.sec.current { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(255, 210, 63, .25); }
+.sec.done .sec-title { color: var(--green); }
+.sec-top { display: flex; gap: 10px; align-items: center; }
+.sec-time { min-height: 52px; min-width: 92px; border: 0; border-radius: 10px; background: var(--gold); color: #111; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.sec-title { flex: 1; min-width: 0; height: 48px; padding: 0 10px; border: 2px solid transparent; border-radius: 8px; background: transparent; font-size: 19px; font-weight: 700; }
+.sec-title:hover, .sec-title:focus { border-color: var(--line); background: var(--bg); }
+.icon-btn { width: 44px; height: 44px; border: 2px solid var(--line); border-radius: 10px; background: transparent; font-size: 22px; line-height: 1; color: var(--muted); flex: none; }
+.icon-btn:hover { color: var(--red); border-color: var(--red); }
+.sec-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.check { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; cursor: pointer; padding: 6px 4px; }
+.check input { width: 28px; height: 28px; accent-color: var(--green); cursor: pointer; }
+.sec textarea { width: 100%; min-height: 64px; resize: vertical; padding: 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 16px; }
+
+/* Formation */
+.kid-add { display: flex; gap: 8px; }
+.kid-add input { flex: 1; min-width: 0; height: 52px; padding: 0 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 18px; }
+.kid-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.kid-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 4px 4px 12px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 16px; }
+.kid-tag button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 18px; }
+.kid-tag button:hover { color: var(--red); }
+select.form-select { width: 100%; height: 52px; padding: 0 10px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 18px; }
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 3px solid var(--line);
+  border-radius: 12px;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 25%,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 12.5% 100%,
+    #101826;
+  overflow: hidden;
+  touch-action: none;
+}
+.stage.over { border-color: var(--gold); }
+.stage-label { position: absolute; left: 0; right: 0; text-align: center; font-size: 14px; font-weight: 700; color: var(--muted); pointer-events: none; }
+.stage-label.back { top: 4px; }
+.stage-label.front { bottom: 0; padding: 3px 0; background: rgba(255, 89, 100, .25); color: var(--fg); }
+.center-mark { position: absolute; left: 50%; top: 8%; bottom: 10%; border-left: 2px dashed rgba(255, 210, 63, .45); pointer-events: none; }
+.chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 56px; padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--gold); color: #111;
+  font-size: 17px; font-weight: 900; white-space: nowrap;
+  cursor: grab; user-select: none; touch-action: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .4);
+}
+.stage .chip { position: absolute; transform: translate(-50%, -50%); }
+.chip.dragging { opacity: .3; }
+.chip.ghost { position: fixed; transform: translate(-50%, -50%); pointer-events: none; z-index: 1000; cursor: grabbing; }
+.tray { min-height: 64px; padding: 10px; border: 2px dashed var(--line); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tray .chip { background: var(--fg); }
+.tray-empty { color: var(--muted); font-size: 15px; }
+.muted { color: var(--muted); font-size: 15px; margin: 0; }
+.section-title { margin: 4px 0 0; font-size: 17px; color: var(--muted); font-weight: 700; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  max-width: min(92vw, 640px);
+  padding: 14px 22px; border-radius: 12px;
+  background: var(--fg); color: #111; font-size: 19px; font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  z-index: 2000;
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>크리스마스 댄스 <span>연습실</span></h1>
+  <div class="source">
+    <input id="ytUrl" type="text" placeholder="유튜브 주소 붙여넣기" aria-label="유튜브 주소">
+    <button class="btn small" id="ytLoadBtn" type="button">유튜브 열기</button>
+    <button class="btn small" id="fileBtn" type="button">MP4 파일 열기</button>
+    <input id="fileInput" type="file" accept="video/mp4,video/*" hidden>
+    <span class="saved" id="savedFlag">저장됨</span>
+  </div>
+</header>
+
+<div class="notice" id="fileNotice" hidden>
+  <p>이 파일을 더블클릭해서 열면 유튜브 영상이 재생되지 않을 수 있어요(유튜브 오류 153). 그럴 땐 <b>MP4 파일 열기</b>를 쓰거나, VS Code의 Live Server 같은 로컬 웹서버로 열어 주세요.</p>
+  <button class="icon-btn" id="noticeClose" type="button" aria-label="안내 닫기">×</button>
+</div>
+
+<main class="app">
+  <section>
+    <div class="video-wrap">
+      <div id="mirrorTarget" data-mode="yt">
+        <div id="yt"></div>
+        <video id="vid" playsinline preload="metadata"></video>
+      </div>
+      <div class="click-catch" id="clickCatch" title="클릭하면 재생/일시정지"></div>
+      <div class="mirror-badge" id="mirrorBadge" hidden>거울모드</div>
+      <div class="player-msg" id="playerMsg" hidden></div>
+      <div class="countdown" id="countdown" hidden>
+        <div class="num" id="cdNum">3</div>
+        <div class="label">준비!</div>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <span class="time-label" id="timeLabel">00:00 / 00:00</span>
+      <div class="bar">
+        <div class="markers" id="markers"></div>
+        <input id="seek" type="range" min="0" max="1000" step="1" value="0" aria-label="재생 위치">
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="row">
+        <button class="btn big" id="playBtn" type="button">▶ 재생</button>
+        <button class="btn" id="backBtn" type="button">◀ 3초</button>
+        <button class="btn" id="fwdBtn" type="button">3초 ▶</button>
+        <button class="btn" id="mirrorBtn" type="button" aria-pressed="false">거울모드 OFF</button>
+      </div>
+
+      <div class="row" role="group" aria-label="배속">
+        <span class="row-label">배속</span>
+        <div class="row" id="rateBtns"></div>
+        <span class="rate-note" id="rateNote"></span>
+      </div>
+
+      <div class="row" role="group" aria-label="구간 반복">
+        <span class="row-label">구간 반복</span>
+        <button class="btn ab" id="setA" type="button">A 시작점<span class="sub" id="aLabel">미지정</span></button>
+        <button class="btn ab" id="setB" type="button">B 종료점<span class="sub" id="bLabel">미지정</span></button>
+        <button class="btn loop" id="loopBtn" type="button" aria-pressed="false">반복 OFF</button>
+        <button class="btn" id="abReset" type="button">초기화</button>
+        <button class="btn" id="cdBtn" type="button" aria-pressed="true">3초 카운트다운 ON</button>
+      </div>
+
+      <p class="hint">
+        단축키: <kbd>스페이스</kbd> 재생/정지 · <kbd>←</kbd><kbd>→</kbd> 3초 이동 · <kbd>M</kbd> 거울모드 · <kbd>R</kbd> 현재 구간 처음부터
+      </p>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabSec" aria-selected="true" type="button">구간 북마크</button>
+      <button class="tab" role="tab" id="tabForm" aria-selected="false" type="button">무대 대형</button>
+    </div>
+
+    <div class="panel" id="panelSec">
+      <div class="panel-head">
+        <span class="progress-count" id="doneCount">완료 0/0</span>
+        <button class="btn small" id="addSec" type="button">＋ 지금 위치에 구간 추가</button>
+      </div>
+      <div id="secList" style="display:flex;flex-direction:column;gap:10px"></div>
+      <button class="btn small danger" id="resetAll" type="button">모든 기록 초기화</button>
+    </div>
+
+    <div class="panel" id="panelForm" hidden>
+      <h2 class="section-title">아이들 이름</h2>
+      <div class="kid-add">
+        <input id="kidName" type="text" maxlength="12" placeholder="이름 입력 후 Enter">
+        <button class="btn small" id="kidAdd" type="button">추가</button>
+      </div>
+      <div class="kid-list" id="kidList"></div>
+
+      <h2 class="section-title">구간 선택</h2>
+      <select class="form-select" id="formSection" aria-label="대형을 볼 구간"></select>
+      <label class="check"><input type="checkbox" id="formFollow"> 재생 위치에 맞춰 구간 자동 전환</label>
+
+      <div class="stage" id="stage">
+        <div class="stage-label back">무대 뒤</div>
+        <div class="center-mark"></div>
+        <div class="stage-label front">무대 앞 (관객석)</div>
+      </div>
+      <p class="muted">이름표를 끌어서 무대에 놓으세요. 무대 밖으로 끌어내면 빠집니다.</p>
+      <div class="tray" id="tray"></div>
+
+      <div class="row">
+        <button class="btn small" id="row1" type="button">1열 자동 배치</button>
+        <button class="btn small" id="row2" type="button">2열 자동 배치</button>
+        <button class="btn small" id="copyPrev" type="button">이전 구간 대형 복사</button>
+        <button class="btn small danger" id="clearForm" type="button">모두 빼기</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var STORE_KEY = 'dancePractice.v1';
+  var DEFAULT_URL = 'https://youtu.be/Ko9VF6dDnAk';
+  var DEFAULT_SECTIONS = [
+    [2, '오프닝 훅'],
+    [38, '1절 파트'],
+    [67, '1절 후렴 (메인 하이라이트)'],
+    [98, '브릿지 · 댄스 브레이크'],
+    [133, '마지막 후렴 · 엔딩']
+  ];
+  var RATES = [0.6, 0.7, 0.8, 0.9, 1.0];
+
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function fmt(t) {
+    t = Math.max(0, Math.floor(t || 0));
+    var m = Math.floor(t / 60), s = t % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* ---------- storage ---------- */
+  function defaults() {
+    return {
+      sections: DEFAULT_SECTIONS.map(function (d) { return { id: uid(), time: d[0], title: d[1], done: false, memo: '' }; }),
+      kids: [],
+      formations: {},
+      countdown: true,
+      mirror: false,
+      rate: 1,
+      lastUrl: DEFAULT_URL,
+      follow: true,
+      tab: 'sec'
+    };
+  }
+  var S = null;
+  try { S = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { S = null; }
+  if (!S || !Array.isArray(S.sections)) S = defaults();
+  else S = Object.assign(defaults(), S);
+
+  var saveTimer = null, savedTimer = null;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(S));
+        var f = $('#savedFlag');
+        f.classList.add('on');
+        clearTimeout(savedTimer);
+        savedTimer = setTimeout(function () { f.classList.remove('on'); }, 1200);
+      } catch (e) {
+        toast('저장하지 못했어요. 시크릿 창이거나 브라우저 저장이 막혀 있을 수 있어요.');
+      }
+    }, 300);
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('#toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+  function showMsg(msg) { var m = $('#playerMsg'); m.textContent = msg; m.hidden = false; }
+  function hideMsg() { $('#playerMsg').hidden = true; }
+
+  /* ---------- player adapter ---------- */
+  var mode = 'yt';
+  var yt = null, ytReady = false, pendingId = null, apiRequested = false;
+  var vid = $('#vid');
+  var mirrorTarget = $('#mirrorTarget');
+
+  var P = {
+    play: function () {
+      if (mode === 'yt') { if (ytReady) yt.playVideo(); }
+      else if (vid.src) { vid.play().catch(function () {}); }
+    },
+    pause: function () {
+      if (mode === 'yt') { if (ytReady) yt.pauseVideo(); }
+      else vid.pause();
+    },
+    playing: function () {
+      if (mode === 'yt') { if (!ytReady) return false; var s = yt.getPlayerState(); return s === 1 || s === 3; }
+      return !!vid.src && !vid.paused && !vid.ended;
+    },
+    time: function () {
+      if (mode === 'yt') return ytReady ? (yt.getCurrentTime() || 0) : 0;
+      return vid.currentTime || 0;
+    },
+    dur: function () {
+      if (mode === 'yt') return ytReady ? (yt.getDuration() || 0) : 0;
+      return isFinite(vid.duration) ? vid.duration : 0;
+    },
+    seek: function (t) {
+      var d = P.dur();
+      t = Math.max(0, d ? Math.min(t, d - 0.2) : t);
+      if (mode === 'yt') { if (ytReady) yt.seekTo(t, true); }
+      else if (vid.src) vid.currentTime = t;
+    }
+  };
+
+  function parseYouTubeId(url) {
+    url = (url || '').trim();
+    var m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/);
+    if (m) return m[1];
+    if (/^[A-Za-z0-9_-]{11}$/.test(url)) return url;
+    return null;
+  }
+
+  function ensureYTApi() {
+    if (apiRequested) return;
+    apiRequested = true;
+    var s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = function () { showMsg('유튜브 플레이어를 불러오지 못했어요. 인터넷 연결을 확인하거나 MP4 파일을 열어 주세요.'); };
+    document.head.appendChild(s);
+  }
+
+  var YT_ERRORS = {
+    2: '유튜브 주소가 올바르지 않아요.',
+    5: '이 영상은 이 브라우저에서 재생할 수 없어요.',
+    100: '영상을 찾을 수 없어요. 삭제되었거나 비공개일 수 있어요.',
+    101: '영상 주인이 다른 사이트에서의 재생을 막아 두었어요. 유튜브에서 직접 보거나 MP4 파일을 써 주세요.',
+    150: '영상 주인이 다른 사이트에서의 재생을 막아 두었어요. 유튜브에서 직접 보거나 MP4 파일을 써 주세요.',
+    153: '유튜브 플레이어 설정 오류예요. 파일을 더블클릭해서 열었다면 로컬 웹서버로 열거나 MP4 파일을 써 주세요.'
+  };
+
+  window.onYouTubeIframeAPIReady = function () {
+    var vars = { controls: 0, rel: 0, playsinline: 1, modestbranding: 1, disablekb: 1, fs: 0, iv_load_policy: 3 };
+    if (location.protocol.indexOf('http') === 0) vars.origin = location.origin;
+    yt = new YT.Player('yt', {
+      width: '100%',
+      height: '100%',
+      videoId: pendingId || '',
+      playerVars: vars,
+      events: {
+        onReady: function () { ytReady = true; hideMsg(); applyRate(); },
+        onError: function (e) { showMsg(YT_ERRORS[e.data] || ('유튜브 재생 오류가 났어요 (코드 ' + e.data + ').')); },
+        onStateChange: function (e) {
+          if (e.data === 1) {
+            hideMsg();
+            if (Math.abs(yt.getPlaybackRate() - S.rate) > 0.001) { yt.setPlaybackRate(S.rate); setTimeout(checkRate, 600); }
+          }
+          updatePlayBtn();
+        }
+      }
+    });
+  };
+
+  function switchMode(m) {
+    cancelCountdown();
+    if (mode === 'yt' && m !== 'yt' && ytReady) yt.pauseVideo();
+    if (mode === 'mp4' && m !== 'mp4') vid.pause();
+    mode = m;
+    mirrorTarget.dataset.mode = m;
+    hideMsg();
+    $('#rateNote').textContent = '';
+    resetAB(true);
+    lastDur = -1;
+  }
+
+  function loadYouTube(url) {
+    var id = parseYouTubeId(url);
+    if (!id) { toast('유튜브 주소를 인식하지 못했어요. 주소를 다시 확인해 주세요.'); return; }
+    S.lastUrl = url.trim();
+    save();
+    switchMode('yt');
+    if (ytReady) { yt.cueVideoById(id); setTimeout(applyRate, 500); }
+    else { pendingId = id; ensureYTApi(); }
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    switchMode('mp4');
+    if (vid.src && vid.src.indexOf('blob:') === 0) URL.revokeObjectURL(vid.src);
+    vid.src = URL.createObjectURL(file);
+    vid.load();
+    toast('"' + file.name + '" 파일을 열었어요.');
+  }
+  vid.addEventListener('loadedmetadata', function () { applyRate(); });
+  vid.addEventListener('error', function () { if (vid.src) showMsg('이 파일은 브라우저에서 재생할 수 없어요. MP4(H.264) 파일인지 확인해 주세요.'); });
+  vid.addEventListener('play', updatePlayBtn);
+  vid.addEventListener('pause', updatePlayBtn);
+
+  /* ---------- rate ---------- */
+  function applyRate() {
+    if (mode === 'yt') {
+      if (!ytReady) return;
+      yt.setPlaybackRate(S.rate);
+      setTimeout(checkRate, 600);
+    } else {
+      vid.defaultPlaybackRate = S.rate;
+      vid.playbackRate = S.rate;
+      if ('preservesPitch' in vid) vid.preservesPitch = true;
+      $('#rateNote').textContent = '';
+    }
+    renderRates();
+  }
+  function checkRate() {
+    if (mode !== 'yt' || !ytReady) return;
+    var actual = yt.getPlaybackRate();
+    $('#rateNote').textContent = Math.abs(actual - S.rate) > 0.001
+      ? '유튜브가 ' + S.rate.toFixed(1) + '배를 지원하지 않아 ' + actual + '배로 재생 중이에요. 정확한 배속은 MP4 파일로 열어 주세요.'
+      : '';
+  }
+  function renderRates() {
+    var box = $('#rateBtns');
+    box.replaceChildren.apply(box, RATES.map(function (r) {
+      var b = el('button', 'btn rate' + (Math.abs(r - S.rate) < 0.001 ? ' on' : ''), r.toFixed(1) + 'x');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', Math.abs(r - S.rate) < 0.001 ? 'true' : 'false');
+      b.addEventListener('click', function () { S.rate = r; save(); applyRate(); });
+      return b;
+    }));
+  }
+
+  /* ---------- play / seek ---------- */
+  function updatePlayBtn() {
+    var playing = P.playing() || cdTimer !== null;
+    $('#playBtn').textContent = playing ? '❚❚ 일시정지' : '▶ 재생';
+  }
+  function togglePlay() {
+    if (cdTimer !== null) { cancelCountdown(); P.pause(); updatePlayBtn(); return; }
+    if (P.playing()) P.pause(); else P.play();
+    setTimeout(updatePlayBtn, 150);
+  }
+  function nudge(d) { cancelCountdown(); P.seek(P.time() + d); }
+
+  var lastJump = 0;
+  function jumpTo(t, withCountdown) {
+    lastJump = Date.now();
+    P.pause();
+    P.seek(t);
+    if (withCountdown) countdownThenPlay(); else P.play();
+  }
+
+  /* ---------- countdown ---------- */
+  var cdTimer = null;
+  function countdownThenPlay() {
+    cancelCountdown();
+    var n = 3;
+    var box = $('#countdown'), num = $('#cdNum');
+    function show(k) {
+      num.textContent = k;
+      num.style.animation = 'none';
+      void num.offsetWidth;
+      num.style.animation = '';
+    }
+    box.hidden = false;
+    show(n);
+    cdTimer = setInterval(function () {
+      n -= 1;
+      if (n <= 0) { cancelCountdown(); lastJump = Date.now(); P.play(); setTimeout(updatePlayBtn, 150); }
+      else show(n);
+    }, 1000);
+    updatePlayBtn();
+  }
+  function cancelCountdown() {
+    if (cdTimer !== null) clearInterval(cdTimer);
+    cdTimer = null;
+    $('#countdown').hidden = true;
+  }
+
+  /* ---------- A-B loop ---------- */
+  var A = null, B = null, loopOn = false;
+  function resetAB(silent) {
+    A = null; B = null; loopOn = false;
+    renderAB();
+    if (!silent) toast('구간 반복을 초기화했어요.');
+  }
+  function renderAB() {
+    $('#aLabel').textContent = A == null ? '미지정' : fmt(A);
+    $('#bLabel').textContent = B == null ? '미지정' : fmt(B);
+    var lb = $('#loopBtn');
+    lb.textContent = loopOn ? '반복 ON' : '반복 OFF';
+    lb.classList.toggle('on', loopOn);
+    lb.setAttribute('aria-pressed', loopOn ? 'true' : 'false');
+    var cb = $('#cdBtn');
+    cb.textContent = S.countdown ? '3초 카운트다운 ON' : '3초 카운트다운 OFF';
+    cb.classList.toggle('on', S.countdown);
+    cb.setAttribute('aria-pressed', S.countdown ? 'true' : 'false');
+    renderMarkers();
+  }
+  function setA() {
+    A = P.time();
+    if (B != null && B <= A + 0.5) B = null;
+    renderAB();
+    toast('A 시작점: ' + fmt(A));
+  }
+  function setB() {
+    var t = P.time();
+    if (A == null) { toast('A 시작점을 먼저 정해 주세요.'); return; }
+    if (t <= A + 0.5) { toast('B 종료점은 A보다 뒤여야 해요.'); return; }
+    B = t;
+    loopOn = true;
+    renderAB();
+    toast('B 종료점: ' + fmt(B) + ' · 반복을 켰어요.');
+  }
+  function toggleLoop() {
+    if (!loopOn && (A == null || B == null)) { toast('A와 B를 먼저 정해 주세요.'); return; }
+    loopOn = !loopOn;
+    renderAB();
+  }
+
+  /* ---------- sections ---------- */
+  function sortSections() { S.sections.sort(function (a, b) { return a.time - b.time; }); }
+  function currentSectionIndex(t) {
+    var idx = -1;
+    for (var i = 0; i < S.sections.length; i++) if (S.sections[i].time <= t + 0.3) idx = i;
+    return idx;
+  }
+  function restartCurrent() {
+    var start;
+    if (A != null) start = A;
+    else {
+      var i = currentSectionIndex(P.time());
+      start = i >= 0 ? S.sections[i].time : 0;
+    }
+    jumpTo(start, S.countdown);
+  }
+
+  function renderSections() {
+    sortSections();
+    var list = $('#secList');
+    list.replaceChildren();
+    S.sections.forEach(function (s, i) {
+      var card = el('div', 'sec' + (s.done ? ' done' : ''));
+      card.dataset.id = s.id;
+
+      var top = el('div', 'sec-top');
+      var tb = el('button', 'sec-time', fmt(s.time));
+      tb.type = 'button';
+      tb.title = '이 시간으로 이동';
+      tb.addEventListener('click', function () { cancelCountdown(); P.seek(s.time); });
+      var ti = el('input', 'sec-title');
+      ti.type = 'text';
+      ti.value = s.title;
+      ti.id = 'sec-title-' + s.id;
+      ti.setAttribute('aria-label', '구간 이름');
+      ti.addEventListener('input', function () { s.title = ti.value; save(); renderFormSelect(); });
+      var del = el('button', 'icon-btn', '×');
+      del.type = 'button';
+      del.setAttribute('aria-label', '구간 삭제');
+      del.addEventListener('click', function () {
+        if (!confirm('"' + s.title + '" 구간을 삭제할까요? 메모와 대형도 함께 지워져요.')) return;
+        S.sections = S.sections.filter(function (x) { return x.id !== s.id; });
+        delete S.formations[s.id];
+        save(); renderSections(); renderStage();
+      });
+      top.append(tb, ti, del);
+
+      var actions = el('div', 'sec-actions');
+      var lab = el('label', 'check');
+      var cb = el('input');
+      cb.type = 'checkbox';
+      cb.checked = !!s.done;
+      cb.id = 'sec-done-' + s.id;
+      cb.addEventListener('change', function () { s.done = cb.checked; card.classList.toggle('done', s.done); save(); renderDoneCount(); });
+      lab.append(cb, document.createTextNode('연습 완료'));
+      var loopB = el('button', 'btn small', '이 구간 반복');
+      loopB.type = 'button';
+      loopB.addEventListener('click', function () {
+        var next = S.sections[i + 1];
+        var end = next ? next.time : P.dur();
+        if (!end || end <= s.time) { toast('구간 끝 시간을 알 수 없어요. 영상을 먼저 불러와 주세요.'); return; }
+        A = s.time; B = end; loopOn = true;
+        renderAB();
+        jumpTo(A, S.countdown);
+      });
+      var setT = el('button', 'btn small', '시간을 현재로');
+      setT.type = 'button';
+      setT.addEventListener('click', function () { s.time = Math.floor(P.time()); save(); renderSections(); });
+      actions.append(lab, loopB, setT);
+
+      var memo = el('textarea');
+      memo.id = 'sec-memo-' + s.id;
+      memo.placeholder = '티칭 메모 (예: 2열 손동작이 반 박자 늦음)';
+      memo.value = s.memo || '';
+      memo.addEventListener('input', function () { s.memo = memo.value; save(); });
+
+      card.append(top, actions, memo);
+      list.appendChild(card);
+    });
+    renderDoneCount();
+    renderFormSelect();
+    renderMarkers();
+    lastCur = null;
+  }
+  function renderDoneCount() {
+    var done = S.sections.filter(function (s) { return s.done; }).length;
+    $('#doneCount').textContent = '연습 완료 ' + done + '/' + S.sections.length;
+  }
+
+  /* ---------- markers on the bar ---------- */
+  function renderMarkers() {
+    var box = $('#markers');
+    box.replaceChildren();
+    var d = P.dur();
+    if (!d) return;
+    S.sections.forEach(function (s) {
+      if (s.time > d) return;
+      var t = el('div', 'tick');
+      t.style.left = (s.time / d * 100) + '%';
+      box.appendChild(t);
+    });
+    if (A != null && B != null) {
+      var r = el('div', 'ab-range');
+      r.style.left = (A / d * 100) + '%';
+      r.style.width = ((B - A) / d * 100) + '%';
+      box.appendChild(r);
+    }
+    if (A != null) { var a = el('div', 'pin a', 'A'); a.style.left = (A / d * 100) + '%'; box.appendChild(a); }
+    if (B != null) { var b = el('div', 'pin b', 'B'); b.style.left = (B / d * 100) + '%'; box.appendChild(b); }
+  }
+
+  /* ---------- formation ---------- */
+  var formSel = null;
+  function renderFormSelect() {
+    var sel = $('#formSection');
+    sel.replaceChildren.apply(sel, S.sections.map(function (s) {
+      var o = el('option', null, fmt(s.time) + '  ' + s.title);
+      o.value = s.id;
+      return o;
+    }));
+    if (!S.sections.some(function (s) { return s.id === formSel; })) formSel = S.sections[0] ? S.sections[0].id : null;
+    sel.value = formSel || '';
+  }
+  function renderKids() {
+    var list = $('#kidList');
+    list.replaceChildren();
+    if (!S.kids.length) { list.appendChild(el('p', 'muted', '아직 등록한 아이가 없어요.')); return; }
+    S.kids.forEach(function (k) {
+      var tag = el('span', 'kid-tag', k.name);
+      var x = el('button', null, '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', k.name + ' 삭제');
+      x.addEventListener('click', function () {
+        if (!confirm(k.name + ' 이름을 지울까요? 모든 구간의 대형에서도 빠져요.')) return;
+        S.kids = S.kids.filter(function (y) { return y.id !== k.id; });
+        Object.keys(S.formations).forEach(function (sid) { delete S.formations[sid][k.id]; });
+        save(); renderKids(); renderStage();
+      });
+      tag.appendChild(x);
+      list.appendChild(tag);
+    });
+  }
+  function addKid() {
+    var inp = $('#kidName');
+    var name = inp.value.trim();
+    if (!name) return;
+    if (S.kids.some(function (k) { return k.name === name; })) { toast('이미 등록된 이름이에요.'); return; }
+    S.kids.push({ id: uid(), name: name });
+    inp.value = '';
+    save(); renderKids(); renderStage();
+  }
+
+  var stage = $('#stage');
+  function renderStage() {
+    Array.prototype.slice.call(stage.querySelectorAll('.chip')).forEach(function (c) { c.remove(); });
+    var tray = $('#tray');
+    tray.replaceChildren();
+    if (!formSel) { tray.appendChild(el('span', 'tray-empty', '구간을 먼저 만들어 주세요.')); return; }
+    var f = S.formations[formSel] || {};
+    var unplaced = 0;
+    S.kids.forEach(function (k) {
+      var pos = f[k.id];
+      var chip = el('div', 'chip', k.name);
+      if (pos) {
+        chip.style.left = pos.x + '%';
+        chip.style.top = pos.y + '%';
+        chip.addEventListener('pointerdown', function (e) { startDrag(e, k, chip, true); });
+        stage.appendChild(chip);
+      } else {
+        unplaced++;
+        chip.addEventListener('pointerdown', function (e) { startDrag(e, k, chip, false); });
+        tray.appendChild(chip);
+      }
+    });
+    if (!S.kids.length) tray.appendChild(el('span', 'tray-empty', '위에서 아이 이름을 먼저 등록해 주세요.'));
+    else if (!unplaced) tray.appendChild(el('span', 'tray-empty', '모든 아이가 무대에 있어요.'));
+  }
+  function startDrag(e, kid, chip, fromStage) {
+    if (!formSel) return;
+    e.preventDefault();
+    var ghost = chip.cloneNode(true);
+    ghost.className = 'chip ghost';
+    ghost.style.left = e.clientX + 'px';
+    ghost.style.top = e.clientY + 'px';
+    document.body.appendChild(ghost);
+    chip.classList.add('dragging');
+    function inside(ev) {
+      var r = stage.getBoundingClientRect();
+      return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+    }
+    function move(ev) {
+      ghost.style.left = ev.clientX + 'px';
+      ghost.style.top = ev.clientY + 'px';
+      stage.classList.toggle('over', inside(ev));
+    }
+    function up(ev) {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      ghost.remove();
+      chip.classList.remove('dragging');
+      stage.classList.remove('over');
+      if (ev.type === 'pointercancel') { renderStage(); return; }
+      var f = S.formations[formSel] || (S.formations[formSel] = {});
+      if (inside(ev)) {
+        var r = stage.getBoundingClientRect();
+        f[kid.id] = {
+          x: Math.round(clamp((ev.clientX - r.left) / r.width * 100, 5, 95) * 10) / 10,
+          y: Math.round(clamp((ev.clientY - r.top) / r.height * 100, 8, 88) * 10) / 10
+        };
+      } else if (fromStage) {
+        delete f[kid.id];
+      }
+      save(); renderStage();
+    }
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+  function arrange(rows) {
+    if (!formSel) return;
+    var kids = S.kids;
+    if (!kids.length) { toast('먼저 아이 이름을 등록해 주세요.'); return; }
+    var f = {};
+    if (rows === 1 || kids.length < 3) {
+      kids.forEach(function (k, i) { f[k.id] = { x: (i + 1) / (kids.length + 1) * 100, y: 55 }; });
+    } else {
+      var backN = Math.floor(kids.length / 2);
+      var back = kids.slice(0, backN), front = kids.slice(backN);
+      front.forEach(function (k, i) { f[k.id] = { x: (i + 1) / (front.length + 1) * 100, y: 70 }; });
+      back.forEach(function (k, i) { f[k.id] = { x: (i + 1) / (back.length + 1) * 100, y: 32 }; });
+    }
+    S.formations[formSel] = f;
+    save(); renderStage();
+  }
+  function copyPrev() {
+    var idx = -1;
+    S.sections.forEach(function (s, i) { if (s.id === formSel) idx = i; });
+    if (idx <= 0) { toast('이전 구간이 없어요.'); return; }
+    var prev = S.formations[S.sections[idx - 1].id];
+    if (!prev || !Object.keys(prev).length) { toast('이전 구간에 저장된 대형이 없어요.'); return; }
+    S.formations[formSel] = JSON.parse(JSON.stringify(prev));
+    save(); renderStage();
+    toast('이전 구간 대형을 복사했어요.');
+  }
+
+  /* ---------- tabs ---------- */
+  function setTab(t) {
+    S.tab = t;
+    $('#tabSec').setAttribute('aria-selected', t === 'sec' ? 'true' : 'false');
+    $('#tabForm').setAttribute('aria-selected', t === 'form' ? 'true' : 'false');
+    $('#panelSec').hidden = t !== 'sec';
+    $('#panelForm').hidden = t !== 'form';
+    if (t === 'form') renderStage();
+    save();
+  }
+
+  /* ---------- mirror ---------- */
+  function toggleMirror() {
+    S.mirror = !S.mirror;
+    renderMirror();
+    save();
+  }
+  function renderMirror() {
+    mirrorTarget.classList.toggle('mirrored', S.mirror);
+    $('#mirrorBadge').hidden = !S.mirror;
+    var b = $('#mirrorBtn');
+    b.textContent = S.mirror ? '거울모드 ON' : '거울모드 OFF';
+    b.classList.toggle('on', S.mirror);
+    b.setAttribute('aria-pressed', S.mirror ? 'true' : 'false');
+  }
+
+  /* ---------- tick ---------- */
+  var seeking = false, lastDur = -1, lastCur = null;
+  setInterval(function () {
+    var t = P.time(), d = P.dur();
+    if (d !== lastDur) { lastDur = d; renderMarkers(); }
+    if (!seeking) {
+      $('#timeLabel').textContent = fmt(t) + ' / ' + fmt(d);
+      $('#seek').value = d ? Math.round(t / d * 1000) : 0;
+    }
+    if (loopOn && A != null && B != null && B > A && cdTimer === null && Date.now() - lastJump > 900 && P.playing() && t >= B) {
+      jumpTo(A, S.countdown);
+    }
+    var ci = currentSectionIndex(t);
+    var cur = ci >= 0 ? S.sections[ci].id : null;
+    if (cur !== lastCur) {
+      lastCur = cur;
+      Array.prototype.forEach.call(document.querySelectorAll('.sec'), function (c) { c.classList.toggle('current', c.dataset.id === cur); });
+      if (S.follow && cur && cur !== formSel) {
+        formSel = cur;
+        $('#formSection').value = cur;
+        if (S.tab === 'form') renderStage();
+      }
+    }
+    updatePlayBtn();
+  }, 100);
+
+  /* ---------- wiring ---------- */
+  $('#playBtn').addEventListener('click', togglePlay);
+  $('#clickCatch').addEventListener('click', togglePlay);
+  $('#backBtn').addEventListener('click', function () { nudge(-3); });
+  $('#fwdBtn').addEventListener('click', function () { nudge(3); });
+  $('#mirrorBtn').addEventListener('click', toggleMirror);
+  $('#setA').addEventListener('click', setA);
+  $('#setB').addEventListener('click', setB);
+  $('#loopBtn').addEventListener('click', toggleLoop);
+  $('#abReset').addEventListener('click', function () { resetAB(false); });
+  $('#cdBtn').addEventListener('click', function () { S.countdown = !S.countdown; save(); renderAB(); });
+  $('#ytLoadBtn').addEventListener('click', function () { loadYouTube($('#ytUrl').value); });
+  $('#ytUrl').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadYouTube($('#ytUrl').value); });
+  $('#fileBtn').addEventListener('click', function () { $('#fileInput').click(); });
+  $('#fileInput').addEventListener('change', function (e) { loadFile(e.target.files[0]); e.target.value = ''; });
+  $('#addSec').addEventListener('click', function () {
+    S.sections.push({ id: uid(), time: Math.floor(P.time()), title: '새 구간', done: false, memo: '' });
+    save(); renderSections();
+    toast(fmt(P.time()) + '에 구간을 추가했어요. 이름을 바꿔 주세요.');
+  });
+  $('#resetAll').addEventListener('click', function () {
+    if (!confirm('구간, 완료 체크, 메모, 아이 이름, 대형을 모두 처음 상태로 되돌릴까요?')) return;
+    var keepUrl = S.lastUrl;
+    S = defaults();
+    S.lastUrl = keepUrl;
+    save(); renderAll();
+  });
+  $('#tabSec').addEventListener('click', function () { setTab('sec'); });
+  $('#tabForm').addEventListener('click', function () { setTab('form'); });
+  $('#kidAdd').addEventListener('click', addKid);
+  $('#kidName').addEventListener('keydown', function (e) { if (e.key === 'Enter') addKid(); });
+  $('#formSection').addEventListener('change', function (e) { formSel = e.target.value; renderStage(); });
+  $('#formFollow').addEventListener('change', function (e) { S.follow = e.target.checked; save(); lastCur = null; });
+  $('#row1').addEventListener('click', function () { arrange(1); });
+  $('#row2').addEventListener('click', function () { arrange(2); });
+  $('#copyPrev').addEventListener('click', copyPrev);
+  $('#clearForm').addEventListener('click', function () { if (formSel) { delete S.formations[formSel]; save(); renderStage(); } });
+  $('#noticeClose').addEventListener('click', function () { $('#fileNotice').hidden = true; });
+
+  var seekEl = $('#seek');
+  seekEl.addEventListener('input', function () {
+    seeking = true;
+    var d = P.dur();
+    $('#timeLabel').textContent = fmt(seekEl.value / 1000 * d) + ' / ' + fmt(d);
+  });
+  seekEl.addEventListener('change', function () {
+    cancelCountdown();
+    P.seek(seekEl.value / 1000 * P.dur());
+    seeking = false;
+  });
+
+  function isTyping(t) { return t && t.closest && t.closest('input:not([type="range"]):not([type="checkbox"]), textarea, select, [contenteditable="true"]'); }
+  document.addEventListener('keydown', function (e) {
+    if (isTyping(e.target)) { if (e.key === 'Escape') e.target.blur(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    switch (e.code) {
+      case 'Space': e.preventDefault(); if (!e.repeat) togglePlay(); break;
+      case 'ArrowLeft': e.preventDefault(); nudge(-3); break;
+      case 'ArrowRight': e.preventDefault(); nudge(3); break;
+      case 'KeyM': if (!e.repeat) toggleMirror(); break;
+      case 'KeyR': if (!e.repeat) restartCurrent(); break;
+    }
+  });
+  document.addEventListener('keyup', function (e) {
+    if (!isTyping(e.target) && e.code === 'Space') e.preventDefault();
+  });
+
+  function renderAll() {
+    renderRates();
+    renderAB();
+    renderMirror();
+    renderSections();
+    renderKids();
+    $('#formFollow').checked = !!S.follow;
+    setTab(S.tab === 'form' ? 'form' : 'sec');
+  }
+
+  /* ---------- start ---------- */
+  if (location.protocol === 'file:') $('#fileNotice').hidden = false;
+  $('#ytUrl').value = S.lastUrl || DEFAULT_URL;
+  renderAll();
+  pendingId = parseYouTubeId(S.lastUrl) || parseYouTubeId(DEFAULT_URL);
+  ensureYTApi();
+})();
+</script>
+</body>
+</html>
