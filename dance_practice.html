@@ -276,6 +276,23 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
 .check input { width: 28px; height: 28px; accent-color: var(--green); cursor: pointer; }
 .sec textarea { width: 100%; min-height: 64px; resize: vertical; padding: 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 16px; }
 
+.modal-bg {
+  position: fixed; inset: 0; z-index: 3000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .7);
+}
+.modal {
+  width: min(100%, 620px);
+  padding: 26px 26px 22px;
+  border: 3px solid var(--gold);
+  border-radius: 16px;
+  background: var(--panel);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.modal h2 { margin: 0; font-size: 26px; font-weight: 900; color: var(--gold); }
+.modal p { margin: 0; font-size: 19px; white-space: pre-line; }
+.modal .row { justify-content: flex-end; }
 .toast {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
   max-width: min(92vw, 640px);
@@ -305,7 +322,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
 </header>
 
 <div class="notice" id="fileNotice" hidden>
-  <p>파일을 직접 열어서(다운로드 폴더, 더블클릭 등) 유튜브 영상이 재생되지 않을 수 있어요(유튜브 오류 153). 그럴 땐 <b>MP4 파일 열기</b>를 쓰거나, 웹 주소(https://...)로 올린 페이지에서 열어 주세요.</p>
+  <p>파일을 직접 열어서(다운로드 폴더, 더블클릭 등) 유튜브 영상이 재생되지 않을 수 있어요(유튜브 오류 153). 그럴 땐 <b>MP4 파일 열기</b>를 쓰거나, 폴더 안의 <b>Start_DancePractice.bat</b> 또는 웹 주소(https://...)로 열어 주세요.</p>
   <button class="icon-btn" id="noticeClose" type="button" aria-label="안내 닫기">×</button>
 </div>
 
@@ -397,6 +414,17 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   </aside>
 </main>
 
+<div class="modal-bg" id="warnModal" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="warnTitle" aria-describedby="warnText">
+    <h2 id="warnTitle">⚠ 유튜브를 쓸 수 없어요</h2>
+    <p id="warnText"></p>
+    <div class="row">
+      <button class="btn big" id="warnMp4" type="button">MP4 파일 열기</button>
+      <button class="btn" id="warnOk" type="button">확인</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -481,6 +509,16 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
   }
+  var warnShown = {};
+  function showWarn(title, text) {
+    if (warnShown[title] || !$('#warnModal').hidden) return;
+    warnShown[title] = true;
+    $('#warnTitle').textContent = title;
+    $('#warnText').textContent = text;
+    $('#warnModal').hidden = false;
+    setTimeout(function () { $('#warnOk').focus(); }, 0);
+  }
+  function hideWarn() { $('#warnModal').hidden = true; }
   function showMsg(msg) { var m = $('#playerMsg'); m.textContent = msg; m.hidden = false; }
   function hideMsg() { $('#playerMsg').hidden = true; }
 
@@ -533,7 +571,10 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     apiRequested = true;
     var s = document.createElement('script');
     s.src = 'https://www.youtube.com/iframe_api';
-    s.onerror = function () { showMsg('유튜브 플레이어를 불러오지 못했어요. 인터넷 연결을 확인하거나 MP4 파일을 열어 주세요.'); };
+    s.onerror = function () {
+      showMsg('유튜브 플레이어를 불러오지 못했어요. 인터넷 연결을 확인하거나 MP4 파일을 열어 주세요.');
+      showWarn('⚠ 유튜브를 불러오지 못했어요', '인터넷에 연결되어 있지 않거나 유튜브 접속이 막혀 있어요.\n지금은 MP4 파일로만 연습할 수 있어요.');
+    };
     document.head.appendChild(s);
   }
 
@@ -556,7 +597,11 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       playerVars: vars,
       events: {
         onReady: function () { ytReady = true; hideMsg(); applyRate(); applyVolume(); applyYtCaptions(); },
-        onError: function (e) { showMsg(YT_ERRORS[e.data] || ('유튜브 재생 오류가 났어요 (코드 ' + e.data + ').')); },
+        onError: function (e) {
+          showMsg(YT_ERRORS[e.data] || ('유튜브 재생 오류가 났어요 (코드 ' + e.data + ').'));
+          if (e.data === 153) showWarn('⚠ 웹서버로 열리지 않았어요', '유튜브가 이 방식으로 연 페이지에서는 영상을 재생하지 않아요(오류 153).\n지금은 MP4 파일로만 실행할 수 있어요.\n\n유튜브를 쓰려면 폴더 안의 "Start_DancePractice.bat"를 더블클릭해서 열어 주세요.');
+          else if (e.data === 101 || e.data === 150) showWarn('⚠ 이 영상은 여기서 재생할 수 없어요', '영상 주인이 다른 사이트에서의 재생을 막아 두었어요.\nMP4 파일로만 실행할 수 있어요.');
+        },
         onStateChange: function (e) {
           if (e.data === 1) {
             hideMsg();
@@ -1168,6 +1213,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
 
   function isTyping(t) { return t && t.closest && t.closest('input:not([type="range"]):not([type="checkbox"]), textarea, select, [contenteditable="true"]'); }
   document.addEventListener('keydown', function (e) {
+    if (!$('#warnModal').hidden) { if (e.key === 'Escape') hideWarn(); return; }
     if (isTyping(e.target)) { if (e.key === 'Escape') e.target.blur(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     switch (e.code) {
@@ -1184,9 +1230,11 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     }
   });
   document.addEventListener('keyup', function (e) {
-    if (!isTyping(e.target) && e.code === 'Space') e.preventDefault();
+    if ($('#warnModal').hidden && !isTyping(e.target) && e.code === 'Space') e.preventDefault();
   });
 
+  $('#warnOk').addEventListener('click', hideWarn);
+  $('#warnMp4').addEventListener('click', function () { hideWarn(); $('#fileInput').click(); });
   $('#muteBtn').addEventListener('click', toggleMute);
   $('#volDown').addEventListener('click', function () { setVolume(S.volume - 10); });
   $('#volUp').addEventListener('click', function () { setVolume(S.volume + 10); });
@@ -1202,7 +1250,10 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   }
 
   /* ---------- start ---------- */
-  if (location.protocol !== 'http:' && location.protocol !== 'https:') $('#fileNotice').hidden = false;
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') {
+    $('#fileNotice').hidden = false;
+    showWarn('⚠ 웹서버로 열리지 않았어요', '파일을 직접 열어서 유튜브 영상이 재생되지 않을 수 있어요.\n이 상태에서는 MP4 파일로만 실행 가능해요.\n\n유튜브를 쓰려면 이 창을 닫고, 폴더 안의 "Start_DancePractice.bat"를 더블클릭해서 열어 주세요.');
+  }
   $('#ytUrl').value = S.lastUrl || DEFAULT_URL;
   renderAll();
   save();
