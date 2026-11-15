@@ -238,6 +238,15 @@ main.app {
 .ab-edit .tag.a { background: var(--gold); }
 .ab-edit .tag.b { background: var(--red); }
 .rate-note { font-size: 16px; color: var(--gold); }
+.vol { display: flex; align-items: center; gap: 12px; flex: 1 1 280px; min-width: 0; max-width: 520px; }
+.vol input[type="range"] { flex: 1; min-width: 0; height: 44px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; }
+.vol input[type="range"]::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--green) var(--fill, 100%), var(--panel-2) var(--fill, 100%)); border: 1px solid var(--line); }
+.vol input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -9px; border-radius: 50%; background: var(--fg); border: 4px solid var(--green); }
+.vol input[type="range"]::-moz-range-track { height: 12px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+.vol input[type="range"]::-moz-range-progress { height: 12px; border-radius: 6px; background: var(--green); }
+.vol input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--fg); border: 4px solid var(--green); }
+.vol-num { min-width: 64px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.btn.mute.on { background: var(--red); border-color: var(--red); color: #fff; }
 .hint { font-size: 16px; color: var(--muted); margin: 0; }
 kbd { display: inline-block; padding: 1px 8px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; background: var(--panel-2); color: var(--fg); font-family: inherit; font-size: 15px; }
 
@@ -335,6 +344,17 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
         <button class="btn" id="fsBtn" type="button">전체화면</button>
       </div>
 
+      <div class="row" role="group" aria-label="음량">
+        <span class="row-label">음량</span>
+        <button class="btn mute" id="muteBtn" type="button" aria-pressed="false">소리 끄기</button>
+        <button class="btn" id="volDown" type="button" aria-label="음량 10 줄이기">−</button>
+        <div class="vol">
+          <input id="vol" type="range" min="0" max="100" step="5" value="100" aria-label="음량">
+          <span class="vol-num" id="volNum">100%</span>
+        </div>
+        <button class="btn" id="volUp" type="button" aria-label="음량 10 키우기">＋</button>
+      </div>
+
       <div class="row" role="group" aria-label="배속">
         <span class="row-label">배속</span>
         <div class="row" id="rateBtns"></div>
@@ -359,7 +379,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       </div>
 
       <p class="hint">
-        단축키: <kbd>스페이스</kbd> 재생/정지 · <kbd>←</kbd><kbd>→</kbd> 3초 이동 · <kbd>M</kbd> 거울모드 · <kbd>R</kbd> 현재 구간 처음부터 · <kbd>F</kbd> 전체화면
+        단축키: <kbd>스페이스</kbd> 재생/정지 · <kbd>←</kbd><kbd>→</kbd> 3초 이동 · <kbd>M</kbd> 거울모드 · <kbd>R</kbd> 현재 구간 처음부터 · <kbd>F</kbd> 전체화면 · <kbd>↑</kbd><kbd>↓</kbd> 음량 · <kbd>V</kbd> 소리 끄기/켜기
       </p>
     </div>
   </section>
@@ -426,6 +446,8 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       countdown: true,
       mirror: false,
       rate: 1,
+      volume: 100,
+      muted: false,
       lastUrl: DEFAULT_URL
     };
   }
@@ -533,7 +555,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       videoId: pendingId || '',
       playerVars: vars,
       events: {
-        onReady: function () { ytReady = true; hideMsg(); applyRate(); applyYtCaptions(); },
+        onReady: function () { ytReady = true; hideMsg(); applyRate(); applyVolume(); applyYtCaptions(); },
         onError: function (e) { showMsg(YT_ERRORS[e.data] || ('유튜브 재생 오류가 났어요 (코드 ' + e.data + ').')); },
         onStateChange: function (e) {
           if (e.data === 1) {
@@ -594,7 +616,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     vid.load();
     toast('"' + file.name + '" 파일을 열었어요.');
   }
-  vid.addEventListener('loadedmetadata', function () { applyRate(); });
+  vid.addEventListener('loadedmetadata', function () { applyRate(); applyVolume(); });
   vid.addEventListener('error', function () { if (vid.src) showMsg('이 파일은 브라우저에서 재생할 수 없어요. MP4(H.264) 파일인지 확인해 주세요.'); });
   vid.addEventListener('play', updatePlayBtn);
   vid.addEventListener('pause', updatePlayBtn);
@@ -662,6 +684,49 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   }
 
   /* ---------- rate ---------- */
+  /* ---------- volume ---------- */
+  function applyVolume() {
+    var v = Math.max(0, Math.min(100, Math.round(S.volume)));
+    if (mode === 'yt') {
+      if (ytReady) {
+        yt.setVolume(v);
+        if (S.muted || v === 0) yt.mute(); else yt.unMute();
+      }
+    } else {
+      vid.volume = v / 100;
+      vid.muted = S.muted || v === 0;
+    }
+    renderVolume();
+  }
+  function renderVolume() {
+    var v = Math.round(S.volume);
+    var off = S.muted || v === 0;
+    var r = $('#vol');
+    if (document.activeElement !== r) r.value = v;
+    r.style.setProperty('--fill', (off ? 0 : v) + '%');
+    $('#volNum').textContent = off ? '음소거' : v + '%';
+    var m = $('#muteBtn');
+    m.textContent = off ? '소리 켜기' : '소리 끄기';
+    m.classList.toggle('on', off);
+    m.setAttribute('aria-pressed', off ? 'true' : 'false');
+  }
+  function setVolume(v) {
+    S.volume = Math.max(0, Math.min(100, Math.round(v)));
+    if (S.volume > 0) S.muted = false;
+    save();
+    applyVolume();
+  }
+  function toggleMute() {
+    if (S.muted || S.volume === 0) {
+      S.muted = false;
+      if (S.volume === 0) S.volume = 50;
+    } else {
+      S.muted = true;
+    }
+    save();
+    applyVolume();
+  }
+
   function applyRate() {
     if (mode === 'yt') {
       if (!ytReady) return;
@@ -1112,6 +1177,9 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       case 'KeyM': if (!e.repeat) toggleMirror(); break;
       case 'KeyR': if (!e.repeat) restartCurrent(); break;
       case 'KeyF': if (!e.repeat) toggleFs(); break;
+      case 'ArrowUp': e.preventDefault(); setVolume(S.volume + 10); toast('음량 ' + S.volume + '%'); break;
+      case 'ArrowDown': e.preventDefault(); setVolume(S.volume - 10); toast(S.volume ? '음량 ' + S.volume + '%' : '음소거'); break;
+      case 'KeyV': if (!e.repeat) toggleMute(); break;
       case 'Escape': if (wrap.classList.contains('pseudo-fs')) exitFs(); break;
     }
   });
@@ -1119,7 +1187,13 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     if (!isTyping(e.target) && e.code === 'Space') e.preventDefault();
   });
 
+  $('#muteBtn').addEventListener('click', toggleMute);
+  $('#volDown').addEventListener('click', function () { setVolume(S.volume - 10); });
+  $('#volUp').addEventListener('click', function () { setVolume(S.volume + 10); });
+  $('#vol').addEventListener('input', function (e) { setVolume(Number(e.target.value)); });
+
   function renderAll() {
+    renderVolume();
     renderRates();
     renderAB();
     renderMirror();
