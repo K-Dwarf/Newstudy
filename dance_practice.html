@@ -104,12 +104,25 @@ main.app {
 .video-wrap:fullscreen { width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto; border-radius: 0; }
 .video-wrap:-webkit-full-screen { width: 100vw; height: 100vh; max-height: none; aspect-ratio: auto; border-radius: 0; }
 .video-wrap.pseudo-fs { position: fixed; inset: 0; z-index: 500; width: 100%; height: 100%; max-height: none; aspect-ratio: auto; border-radius: 0; }
-#mirrorTarget { position: absolute; inset: 0; transition: transform .25s ease; }
+#mirrorTarget { position: absolute; inset: 0; transition: transform .25s ease; container-type: size; }
 #mirrorTarget.mirrored { transform: scaleX(-1); }
-#mirrorTarget iframe, #mirrorTarget video, #mirrorTarget #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-#mirrorTarget video { object-fit: contain; background: #000; }
+#mirrorTarget video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: #000; }
+/* YouTube draws its title bar and logo at the frame edges. The frame is made taller than the visible 16:9 box,
+   so those edges fall outside it and never show (mirrored or not). */
+.yt-box {
+  position: absolute; left: 50%; top: 50%;
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+}
+.yt-box iframe, .yt-box #yt {
+  position: absolute; left: 0; width: 100%; border: 0;
+  top: calc(-1 * max(64px, 15%));
+  height: calc(100% + 2 * max(64px, 15%));
+}
 #mirrorTarget[data-mode="yt"] video { display: none; }
-#mirrorTarget[data-mode="mp4"] #yt { display: none; }
+#mirrorTarget[data-mode="mp4"] .yt-box { display: none; }
 .click-catch { position: absolute; inset: 0; cursor: pointer; }
 .mirror-badge {
   position: absolute; top: 12px; left: 12px;
@@ -135,7 +148,19 @@ main.app {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
-.video-wrap.is-fs .subs { bottom: 120px; }
+.video-wrap.is-fs .mirror-badge { display: none; }
+.fs-exit {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top, 0px));
+  right: max(10px, env(safe-area-inset-right, 0px));
+  width: 44px; height: 44px;
+  border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .5); color: #fff;
+  font-size: 22px; line-height: 1;
+  opacity: .25;
+  transition: opacity .2s;
+}
+.fs-exit:hover, .fs-exit:focus-visible { opacity: 1; }
 .player-msg {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(90%, 640px);
@@ -156,17 +181,6 @@ main.app {
 }
 .countdown .label { font-size: clamp(24px, 3vw, 40px); font-weight: 700; margin-top: 8px; }
 @keyframes pop { from { transform: scale(1.5); opacity: .2; } to { transform: scale(1); opacity: 1; } }
-
-/* Fullscreen control bar */
-.fs-bar {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;
-  padding: 14px max(16px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-  background: linear-gradient(transparent, rgba(0, 0, 0, .85) 40%);
-}
-.fs-bar .btn { min-height: 54px; font-size: 19px; background: rgba(28, 37, 53, .9); }
-.fs-bar .btn.big { background: var(--gold); }
-.fs-time { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 0 6px; }
 
 /* Timeline */
 .timeline { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
@@ -246,7 +260,9 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
 .icon-btn:hover { color: var(--red); border-color: var(--red); }
 .sec-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .sec-edit { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 2px; }
-.sec-edit .lbl { font-size: 15px; color: var(--muted); font-weight: 700; }
+.sec-edit .lbl { font-size: 15px; color: var(--muted); font-weight: 700; width: 30px; }
+.sec-edit .btn.small { padding: 0 10px; }
+.sec-edit .time-input::placeholder { color: var(--muted); opacity: .7; }
 .check { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; cursor: pointer; padding: 6px 4px; }
 .check input { width: 28px; height: 28px; accent-color: var(--green); cursor: pointer; }
 .sec textarea { width: 100%; min-height: 64px; resize: vertical; padding: 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 16px; }
@@ -288,7 +304,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   <section>
     <div class="video-wrap" id="videoWrap">
       <div id="mirrorTarget" data-mode="yt">
-        <div id="yt"></div>
+        <div class="yt-box"><div id="yt"></div></div>
         <video id="vid" playsinline preload="metadata"></video>
       </div>
       <div class="click-catch" id="clickCatch" title="클릭하면 재생/일시정지"></div>
@@ -299,15 +315,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
         <div class="num" id="cdNum">3</div>
         <div class="label">준비!</div>
       </div>
-      <div class="fs-bar" id="fsBar" hidden>
-        <span class="fs-time" id="fsTime">00:00</span>
-        <button class="btn big" id="fsPlay" type="button">▶ 재생</button>
-        <button class="btn" id="fsBack" type="button">◀ 3초</button>
-        <button class="btn" id="fsFwd" type="button">3초 ▶</button>
-        <button class="btn" id="fsRestart" type="button">구간 처음부터</button>
-        <button class="btn" id="fsMirror" type="button">거울모드</button>
-        <button class="btn" id="fsExit" type="button">전체화면 끄기</button>
-      </div>
+      <button class="fs-exit" id="fsExit" type="button" aria-label="전체화면 끄기" title="전체화면 끄기 (F / Esc)" hidden>×</button>
     </div>
 
     <div class="timeline">
@@ -346,6 +354,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
         <span class="row-label">시간 입력</span>
         <label class="ab-edit"><span class="tag a">A</span><input class="time-input" id="aInput" type="text" inputmode="decimal" placeholder="00:00" aria-label="A 시작점 시간"></label>
         <label class="ab-edit"><span class="tag b">B</span><input class="time-input" id="bInput" type="text" inputmode="decimal" placeholder="00:00" aria-label="B 종료점 시간"></label>
+        <button class="btn loop" id="loopStart" type="button">▶ 반복 시작</button>
         <span class="hint">예: 1:07 또는 67 입력 후 Enter</span>
       </div>
 
@@ -689,7 +698,6 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   function updatePlayBtn() {
     var label = (P.playing() || cdTimer !== null) ? '❚❚ 일시정지' : '▶ 재생';
     $('#playBtn').textContent = label;
-    $('#fsPlay').textContent = label;
   }
   function togglePlay() {
     if (cdTimer !== null) { cancelCountdown(); P.pause(); updatePlayBtn(); return; }
@@ -793,6 +801,12 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     renderAB();
     toast('B 종료점을 ' + fmt(B) + '로 바꿨어요 · 반복 ON');
   }
+  function startLoop() {
+    if (A == null || B == null) { toast('A와 B 시간을 먼저 정해 주세요.'); return; }
+    loopOn = true;
+    renderAB();
+    jumpTo(A, S.countdown);
+  }
   function toggleLoop() {
     if (!loopOn && (A == null || B == null)) { toast('A와 B를 먼저 정해 주세요.'); return; }
     loopOn = !loopOn;
@@ -815,13 +829,64 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     }
     jumpTo(start, S.countdown);
   }
-  function setSectionTime(s, t) {
+  /* end of a section: its own end if set, otherwise the next section's start, otherwise the video end */
+  function sectionEnd(i) {
+    var s = S.sections[i];
+    if (s.end != null) return s.end;
+    var n = S.sections[i + 1];
+    return n ? n.time : P.dur();
+  }
+  function cleanTime(t) {
     var d = P.dur();
     t = Math.max(0, Math.round(t * 10) / 10);
     if (d && t > d) t = Math.floor(d);
+    return t;
+  }
+  function setSectionStart(s, t) {
+    if (t == null) { toast('시작 시간은 비울 수 없어요.'); renderSections(); return; }
+    t = cleanTime(t);
+    if (s.end != null && t >= s.end - 0.5) { toast('시작은 끝(' + fmt(s.end) + ')보다 앞이어야 해요.'); renderSections(); return; }
     s.time = t;
     save();
     renderSections();
+  }
+  function setSectionEnd(s, t) {
+    if (t == null) { s.end = null; save(); renderSections(); toast('끝 지점을 비웠어요. 다음 구간 시작까지 반복해요.'); return; }
+    t = cleanTime(t);
+    if (t <= s.time + 0.5) { toast('끝은 시작(' + fmt(s.time) + ')보다 뒤여야 해요.'); renderSections(); return; }
+    s.end = t;
+    save();
+    renderSections();
+  }
+  function timeEditor(label, id, value, base, placeholder, onSet) {
+    var row = el('div', 'sec-edit');
+    row.appendChild(el('span', 'lbl', label));
+    var inp = el('input', 'time-input');
+    inp.type = 'text';
+    inp.inputMode = 'decimal';
+    inp.id = id;
+    inp.value = value == null ? '' : fmt(value);
+    inp.placeholder = placeholder;
+    inp.setAttribute('aria-label', label);
+    inp.addEventListener('change', function () {
+      var raw = inp.value.trim();
+      if (!raw) { onSet(null); return; }
+      var t = parseTime(raw);
+      if (t == null) { toast('시간을 1:07 또는 67처럼 입력해 주세요.'); inp.value = value == null ? '' : fmt(value); return; }
+      onSet(t);
+    });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
+    var minus = el('button', 'btn small', '−1초');
+    minus.type = 'button';
+    minus.addEventListener('click', function () { onSet((base || 0) - 1); });
+    var plus = el('button', 'btn small', '+1초');
+    plus.type = 'button';
+    plus.addEventListener('click', function () { onSet((base || 0) + 1); });
+    var now = el('button', 'btn small', '현재로');
+    now.type = 'button';
+    now.addEventListener('click', function () { onSet(Math.floor(P.time())); });
+    row.append(inp, minus, plus, now);
+    return row;
   }
 
   function renderSections() {
@@ -864,41 +929,17 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       var loopB = el('button', 'btn small', '이 구간 반복');
       loopB.type = 'button';
       loopB.addEventListener('click', function () {
-        var next = S.sections[i + 1];
-        var end = next ? next.time : P.dur();
-        if (!end || end <= s.time) { toast('구간 끝 시간을 알 수 없어요. 영상을 먼저 불러와 주세요.'); return; }
+        var end = sectionEnd(i);
+        if (!end || end <= s.time) { toast('구간 끝 시간을 알 수 없어요. 끝 지점을 입력하거나 영상을 먼저 불러와 주세요.'); return; }
         A = s.time; B = end; loopOn = true;
         renderAB();
         jumpTo(A, S.countdown);
       });
       actions.append(lab, loopB);
 
-      var edit = el('div', 'sec-edit');
-      edit.appendChild(el('span', 'lbl', '시작 시간'));
-      var tIn = el('input', 'time-input');
-      tIn.type = 'text';
-      tIn.inputMode = 'decimal';
-      tIn.id = 'sec-time-' + s.id;
-      tIn.value = fmt(s.time);
-      tIn.setAttribute('aria-label', '구간 시작 시간');
-      function applyInput() {
-        var t = parseTime(tIn.value);
-        if (t == null) { toast('시간을 1:07 또는 67처럼 입력해 주세요.'); tIn.value = fmt(s.time); return; }
-        if (Math.abs(t - s.time) < 0.05) return;
-        setSectionTime(s, t);
-      }
-      tIn.addEventListener('change', applyInput);
-      tIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') tIn.blur(); });
-      var minus = el('button', 'btn small', '−1초');
-      minus.type = 'button';
-      minus.addEventListener('click', function () { setSectionTime(s, s.time - 1); });
-      var plus = el('button', 'btn small', '+1초');
-      plus.type = 'button';
-      plus.addEventListener('click', function () { setSectionTime(s, s.time + 1); });
-      var now = el('button', 'btn small', '현재 위치로');
-      now.type = 'button';
-      now.addEventListener('click', function () { setSectionTime(s, Math.floor(P.time())); });
-      edit.append(tIn, minus, plus, now);
+      var effEnd = sectionEnd(i);
+      var startEdit = timeEditor('시작', 'sec-start-' + s.id, s.time, s.time, '00:00', function (t) { setSectionStart(s, t); });
+      var endEdit = timeEditor('끝', 'sec-end-' + s.id, s.end, effEnd, effEnd ? fmt(effEnd) : '끝까지', function (t) { setSectionEnd(s, t); });
 
       var memo = el('textarea');
       memo.id = 'sec-memo-' + s.id;
@@ -906,7 +947,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
       memo.value = s.memo || '';
       memo.addEventListener('input', function () { s.memo = memo.value; save(); });
 
-      card.append(top, actions, edit, memo);
+      card.append(top, startEdit, endEdit, actions, memo);
       list.appendChild(card);
     });
     renderDoneCount();
@@ -959,9 +1000,6 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
     b.textContent = S.mirror ? '거울모드 ON' : '거울모드 OFF';
     b.classList.toggle('on', S.mirror);
     b.setAttribute('aria-pressed', S.mirror ? 'true' : 'false');
-    var fb = $('#fsMirror');
-    fb.textContent = S.mirror ? '거울모드 ON' : '거울모드 OFF';
-    fb.classList.toggle('on', S.mirror);
   }
 
   /* ---------- fullscreen ---------- */
@@ -985,7 +1023,7 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   function renderFs() {
     var on = isFs();
     wrap.classList.toggle('is-fs', on);
-    $('#fsBar').hidden = !on;
+    $('#fsExit').hidden = !on;
     $('#fsBtn').textContent = on ? '전체화면 끄기' : '전체화면';
   }
   document.addEventListener('fullscreenchange', renderFs);
@@ -995,12 +1033,11 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   var seeking = false, lastDur = -1, lastCur = null;
   setInterval(function () {
     var t = P.time(), d = P.dur();
-    if (d !== lastDur) { lastDur = d; renderMarkers(); }
+    if (d !== lastDur) { lastDur = d; if (isTyping(document.activeElement)) renderMarkers(); else renderSections(); }
     if (!seeking) {
       $('#timeLabel').textContent = fmt(t) + ' / ' + fmt(d);
       $('#seek').value = d ? Math.round(t / d * 1000) : 0;
     }
-    $('#fsTime').textContent = fmt(t) + ' / ' + fmt(d);
     if (loopOn && A != null && B != null && B > A && cdTimer === null && Date.now() - lastJump > 900 && P.playing() && t >= B) {
       jumpTo(A, S.countdown);
     }
@@ -1021,12 +1058,8 @@ aside.side { background: var(--panel); border: 1px solid var(--line); border-rad
   $('#fwdBtn').addEventListener('click', function () { nudge(3); });
   $('#mirrorBtn').addEventListener('click', toggleMirror);
   $('#fsBtn').addEventListener('click', toggleFs);
-  $('#fsPlay').addEventListener('click', togglePlay);
-  $('#fsBack').addEventListener('click', function () { nudge(-3); });
-  $('#fsFwd').addEventListener('click', function () { nudge(3); });
-  $('#fsRestart').addEventListener('click', restartCurrent);
-  $('#fsMirror').addEventListener('click', toggleMirror);
   $('#fsExit').addEventListener('click', exitFs);
+  $('#loopStart').addEventListener('click', startLoop);
   $('#setA').addEventListener('click', setA);
   $('#setB').addEventListener('click', setB);
   $('#aInput').addEventListener('change', editA);
