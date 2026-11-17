@@ -150,6 +150,12 @@ function setSel(day) {
 
 // ---------- 그리기 ----------
 function render() {
+  renderView();
+  // 날짜에 붙인 스티커는 달력을 다시 그릴 때마다 위치를 다시 계산 (decor-ui.js)
+  if (typeof renderStickers === 'function') renderStickers();
+}
+
+function renderView() {
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === state.view));
   const view = $('#view');
   view.replaceChildren();
@@ -220,6 +226,7 @@ function renderMonth(view) {
     const day = addDays(r.start, i);
     const w = dowOf(day);
     const cell = el('div', 'cell');
+    cell.dataset.day = day;
     cell.classList.toggle('other', day.slice(0, 7) !== month);
     cell.classList.toggle('today', day === state.today);
     cell.classList.toggle('sel', day === state.sel);
@@ -262,6 +269,7 @@ function dayList(container, day) {
   const w = dowOf(day);
   const red = w === 0 || isRedDay(day);
   const head = el('div', 'day-head' + (day === state.today ? ' today' : red ? ' sun' : w === 6 ? ' sat' : ''));
+  head.dataset.day = day;
   head.append(el('span', null, koDate(day)));
   if (day === state.today) head.append(el('span', 'sub', '오늘'));
   for (const h of holidaysOn(day)) head.append(el('span', 'hol' + (h.isPublic ? '' : ' observance'), h.name));
@@ -591,7 +599,7 @@ $('#btnNext').onclick = () => step(1);
 $('#btnToday').onclick = () => setSel(state.today);
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && editMode) return setEditMode(false);
+  if (typeof stickerKeydown === 'function' && stickerKeydown(e)) return;
   if (e.key === 'Escape' && !$('#decorPanel').classList.contains('hidden')) return $('#decorPanel').classList.add('hidden');
   if (dlg.open || $('#settingsDlg').open || e.target.matches('input, textarea, select')) return;
   if (e.key === 'ArrowLeft') step(-1);
@@ -621,7 +629,8 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-(async function init() {
+// 시작: 모든 스크립트(decor-ui.js 포함)를 읽은 뒤에 실행
+window.addEventListener('DOMContentLoaded', async function init() {
   state.prefs = await call(cal.prefs).catch(() => ({ alwaysOnTop: false, opacity: 1, bgOpacity: 0.92, autostart: false, showHolidays: true }));
   if (state.prefs.demo) $('#modeTag').classList.remove('hidden');
   cal.onPrefs((p) => { state.prefs = p; refreshSettings(); });
@@ -630,219 +639,7 @@ setInterval(() => {
   refreshSettings();
   await load();
   refreshSettings();
-})();
-
-// ---------- 투명도 ----------
-const pct = (v) => Math.round(Number(v) * 100) + '%';
-function applyLookPrefs() {
-  const p = state.prefs;
-  const a = Number.isFinite(p.bgOpacity) ? p.bgOpacity : 0.92;
-  document.documentElement.style.setProperty('--a', a);
-  document.body.classList.toggle('thin', a < 0.5 && !state.decor?.background);
-  $('#optBgOpacity').value = a;
-  $('#bgOpacityVal').textContent = pct(a);
-  $('#optOpacity').value = p.opacity;
-  $('#opacityVal').textContent = pct(p.opacity);
-}
-$('#optBgOpacity').oninput = (e) => {
-  state.prefs.bgOpacity = Number(e.target.value);
-  applyLookPrefs();
-  cal.setBgOpacity(e.target.value);
-};
-$('#optOpacity').oninput = (e) => {
-  state.prefs.opacity = Number(e.target.value);
-  applyLookPrefs();
-  cal.setOpacity(e.target.value);
-};
-$('#btnDecor').onclick = () => {
-  $('#decorPanel').classList.toggle('hidden');
-  renderDecorPanel();
-};
-$('#btnDecorClose').onclick = () => $('#decorPanel').classList.add('hidden');
-
-// ---------- 꾸미기: 배경 이미지 / 스티커 ----------
-state.decor = { background: null, stickers: [] };
-let editMode = false;
-const imgUrl = (file) => `decor://img/${encodeURIComponent(file)}`;
-
-let saveT;
-function saveDecor(now) {
-  clearTimeout(saveT);
-  const run = () => call(cal.decorSave, state.decor).catch((e) => toast(e.message, true));
-  if (now) return run();
-  saveT = setTimeout(run, 300);
-}
-
-function renderDecor() {
-  const bg = state.decor.background;
-  const layer = $('#bgLayer');
-  layer.replaceChildren();
-  layer.classList.toggle('hidden', !bg);
-  if (bg) {
-    const img = el('div', 'img');
-    img.style.backgroundImage = `url("${imgUrl(bg.file)}")`;
-    img.style.backgroundSize = bg.fit;
-    img.style.opacity = bg.opacity;
-    const dim = el('div', 'dim');
-    dim.style.opacity = bg.dim;
-    layer.append(img, dim);
-  }
-  if (state.prefs) applyLookPrefs();
-
-  const back = $('#stickersBack');
-  const front = $('#stickersFront');
-  const edit = $('#stickersEdit');
-  back.replaceChildren();
-  front.replaceChildren();
-  edit.replaceChildren();
-  for (const s of state.decor.stickers) {
-    const node = stickerNode(s);
-    if (editMode) edit.append(node);
-    else (s.back ? back : front).append(node);
-  }
-  renderDecorPanel();
-}
-
-function stickerNode(s) {
-  const d = el('div', 'sticker' + (s.back ? ' back' : ''));
-  d.style.left = s.x + 'px';
-  d.style.top = s.y + 'px';
-  d.style.width = s.w + 'px';
-  const img = el('img');
-  img.src = imgUrl(s.file);
-  img.alt = '';
-  d.append(img);
-  if (!editMode) return d;
-
-  const del = el('button', 'h del', '✕');
-  del.title = '스티커 삭제';
-  del.onclick = (e) => {
-    e.stopPropagation();
-    state.decor.stickers = state.decor.stickers.filter((x) => x !== s);
-    saveDecor(true);
-    renderDecor();
-  };
-  const lay = el('button', 'h lay', '⇅');
-  lay.title = s.back ? '지금: 글자 뒤 → 누르면 글자 앞으로' : '지금: 글자 앞 → 누르면 글자 뒤로';
-  lay.onclick = (e) => {
-    e.stopPropagation();
-    s.back = !s.back;
-    saveDecor();
-    renderDecor();
-    toast(s.back ? '글자 뒤로 보냈습니다.' : '글자 앞으로 꺼냈습니다.');
-  };
-  const rs = el('div', 'h rs');
-  rs.title = '끌어서 크기 조절';
-  d.append(del, lay, rs);
-
-  // 끌어서 이동 / 모서리로 크기 조절
-  d.addEventListener('pointerdown', (e) => {
-    if (e.target === del || e.target === lay) return;
-    e.preventDefault();
-    const resizing = e.target === rs;
-    const start = { x: e.clientX, y: e.clientY, sx: s.x, sy: s.y, sw: s.w };
-    d.setPointerCapture(e.pointerId);
-    const move = (ev) => {
-      if (resizing) {
-        s.w = Math.max(24, Math.min(window.innerWidth * 2, Math.round(start.sw + (ev.clientX - start.x))));
-        d.style.width = s.w + 'px';
-      } else {
-        s.x = Math.round(start.sx + ev.clientX - start.x);
-        s.y = Math.round(start.sy + ev.clientY - start.y);
-        d.style.left = s.x + 'px';
-        d.style.top = s.y + 'px';
-      }
-    };
-    const up = () => {
-      d.removeEventListener('pointermove', move);
-      d.removeEventListener('pointerup', up);
-      saveDecor();
-    };
-    d.addEventListener('pointermove', move);
-    d.addEventListener('pointerup', up);
-  });
-  return d;
-}
-
-function renderDecorPanel() {
-  const bg = state.decor.background;
-  $('#bgOptions').classList.toggle('hidden', !bg);
-  $('#btnBgClear').disabled = !bg;
-  if (bg) {
-    $('#optBgImgOpacity').value = bg.opacity;
-    $('#bgImgOpacityVal').textContent = pct(bg.opacity);
-    $('#optBgDim').value = bg.dim;
-    $('#bgDimVal').textContent = pct(bg.dim);
-    $('#optBgFit').value = bg.fit;
-  }
-  const n = state.decor.stickers.length;
-  $('#stickerCount').textContent = n ? `(${n}개)` : '';
-  $('#btnStickerEdit').disabled = !n;
-}
-
-function setEditMode(on) {
-  editMode = !!on;
-  $('#stickersEdit').classList.toggle('hidden', !editMode);
-  $('#editBar').classList.toggle('hidden', !editMode);
-  if (editMode) $('#decorPanel').classList.add('hidden');
-  renderDecor();
-}
-
-async function pickImage(title) {
-  try {
-    return await call(cal.decorPick, title);
-  } catch (e) {
-    toast(e.message, true);
-    return null;
-  }
-}
-
-$('#btnBgPick').onclick = async () => {
-  const r = await pickImage('배경 이미지 선택');
-  if (!r) return;
-  const old = state.decor.background;
-  state.decor.background = { file: r.file, opacity: old?.opacity ?? 1, dim: old?.dim ?? 0.35, fit: old?.fit || 'cover' };
-  await saveDecor(true);
-  renderDecor();
-};
-$('#btnBgClear').onclick = async () => {
-  state.decor.background = null;
-  await saveDecor(true);
-  renderDecor();
-};
-const bgSlider = (id, key) => {
-  $(id).oninput = (e) => {
-    if (!state.decor.background) return;
-    state.decor.background[key] = e.target.type === 'range' ? Number(e.target.value) : e.target.value;
-    renderDecor();
-    saveDecor();
-  };
-};
-bgSlider('#optBgImgOpacity', 'opacity');
-bgSlider('#optBgDim', 'dim');
-bgSlider('#optBgFit', 'fit');
-$('#optBgFit').onchange = $('#optBgFit').oninput;
-
-async function addSticker() {
-  const r = await pickImage('스티커로 붙일 이미지 선택');
-  if (!r) return;
-  const w = Math.min(140, Math.round(window.innerWidth * 0.35));
-  const n = state.decor.stickers.length;
-  state.decor.stickers.push({
-    id: Math.random().toString(16).slice(2, 10),
-    file: r.file,
-    x: Math.round(window.innerWidth / 2 - w / 2 + (n % 5) * 12),
-    y: Math.round(window.innerHeight / 3 + (n % 5) * 12),
-    w,
-    back: false,
-  });
-  await saveDecor(true);
-  setEditMode(true);
-}
-$('#btnStickerAdd').onclick = addSticker;
-$('#btnStickerAdd2').onclick = addSticker;
-$('#btnStickerEdit').onclick = () => setEditMode(true);
-$('#btnEditDone').onclick = () => setEditMode(false);
+});
 
 // ---------- 크기 조절 손잡이 ----------
 (function grip() {
@@ -875,5 +672,4 @@ $('#btnEditDone').onclick = () => setEditMode(false);
   });
 })();
 
-// 테스트에서 쓰기 위해 노출
-window.__widget = { state, parseQuick, openEvent, setSel, renderDecor, setEditMode };
+// 꾸미기(투명도·배경 이미지·스티커)는 decor-ui.js

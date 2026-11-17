@@ -1,5 +1,5 @@
 'use strict';
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const call = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 
@@ -27,6 +27,16 @@ contextBridge.exposeInMainWorld('cal', {
   decorGet: call('decor:get'),
   decorSave: call('decor:save'),
   decorPick: call('decor:pick'),
+  decorImportPath: call('decor:importPath'),
+  decorImportBytes: call('decor:importBytes'),
+  // 끌어다 놓은 파일의 실제 경로 (붙여넣은 스크린샷처럼 경로가 없으면 빈 문자열)
+  pathForFile: (file) => {
+    try {
+      return webUtils.getPathForFile(file) || '';
+    } catch {
+      return '';
+    }
+  },
   onFocus: (fn) => ipcRenderer.on('win:focus', () => fn()),
   onPrefs: (fn) => ipcRenderer.on('prefs:changed', (_e, p) => fn(p)),
 });

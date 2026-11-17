@@ -300,8 +300,10 @@ handle('app:openLink', (url) => {
 });
 
 handle('decor:get', () => decor.get());
-handle('decor:save', (d) => decor.save(d));
+handle('decor:save', (d, cleanup) => decor.save(d, cleanup !== false));
 handle('decor:pick', (title) => decor.pickImage(win, String(title || '')));
+handle('decor:importPath', (p) => decor.importPath(p));
+handle('decor:importBytes', (data) => decor.importBytes(data));
 
 app.whenReady().then(() => {
   decor.handleProtocol();

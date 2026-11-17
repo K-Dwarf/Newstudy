@@ -200,24 +200,53 @@ body.thin dialog, body.thin .panel { text-shadow: none; }
 .sticker-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: 10px; }
 #stickersBack { z-index: 1; }
 #stickersFront { z-index: 3; }
-#stickersEdit { z-index: 8; pointer-events: auto; background: rgb(0 0 0 / 0.25); }
-.sticker { position: absolute; user-select: none; }
+/* 편집 중: 스티커가 맨 위(제목줄·탭보다 위)에 있어 손잡이를 어디서든 잡을 수 있음. 빈 곳 클릭은 아래로 통과 */
+#stickersEdit { z-index: 12; pointer-events: none; background: rgb(0 0 0 / 0.25); }
+.edit .sticker { pointer-events: auto; }
+body.editing #view, body.editing .quick { pointer-events: none; } /* 편집 중 달력 칸은 눌리지 않음 (탭·달 넘기기는 가능) */
+.sticker { position: absolute; user-select: none; transform-origin: center center; }
 .sticker img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
-.edit .sticker { outline: 1px dashed rgb(255 255 255 / 0.8); cursor: move; }
-.edit .sticker.back img { opacity: 0.6; }
-.sticker .h {
-  position: absolute; width: 20px; height: 20px; border-radius: 10px; font-size: 11px; line-height: 18px;
-  text-align: center; background: #11141b; color: #fff; border: 1px solid #fff; cursor: pointer; text-shadow: none;
+/* 편집 모드 */
+.edit .sticker { cursor: move; outline: 1px dashed rgb(255 255 255 / 0.45); outline-offset: 2px; }
+.edit .sticker.back img { filter: brightness(0.75); }
+.edit .sticker.sel { outline: 2px solid var(--accent); outline-offset: 3px; z-index: 2; }
+.edit .sticker.dated { outline-color: rgb(255 179 107 / 0.8); }
+.date-tag {
+  position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); white-space: nowrap;
+  font-size: 10px; background: #11141b; color: #ffb36b; border-radius: 8px; padding: 0 5px; pointer-events: none;
 }
-.sticker .del { right: -10px; top: -10px; background: var(--danger); }
-.sticker .lay { left: -10px; top: -10px; }
-.sticker .rs { right: -8px; bottom: -8px; width: 16px; height: 16px; border-radius: 3px; cursor: nwse-resize; background: var(--accent); }
-.edit-bar {
-  position: absolute; left: 8px; right: 8px; bottom: 54px; z-index: 9; display: flex; gap: 6px; align-items: center;
-  background: #11141b; border: 1px solid var(--accent); border-radius: 8px; padding: 6px 8px; font-size: 11.5px;
+.sticker .h { position: absolute; background: #fff; border: 2px solid var(--accent); text-shadow: none; }
+.sticker .rs { right: -9px; bottom: -9px; width: 14px; height: 14px; border-radius: 3px; cursor: nwse-resize; }
+.sticker .rt { left: 50%; top: -30px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; cursor: grab; }
+.sticker .rt::after { /* 회전 손잡이 막대 */
+  content: ""; position: absolute; left: 4px; top: 12px; width: 2px; height: 14px; background: var(--accent);
 }
-.edit-bar span { flex: 1; color: var(--muted); }
-.edit-bar #btnEditDone { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* 주/오늘 탭의 날짜 스티커 (날짜 제목 옆 작은 그림) */
+.day-stickers { display: inline-flex; gap: 2px; align-items: center; }
+.day-stickers img { height: 20px; width: auto; }
+
+.sticker-bar {
+  position: absolute; left: 6px; right: 6px; bottom: 6px; z-index: 13;
+  background: #11141b; border: 1px solid var(--accent); border-radius: 10px; padding: 6px;
+  display: flex; flex-direction: column; gap: 5px; text-shadow: none; box-shadow: 0 6px 18px rgb(0 0 0 / 0.5);
+}
+.sb-hint { color: var(--muted); font-size: 11.5px; padding: 0 2px; }
+.sb-tools { display: flex; flex-direction: column; gap: 5px; }
+.sb-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.sb-row button { padding: 3px 8px; font-size: 12px; }
+.sb-row button.on { border-color: #ffb36b; color: #ffb36b; }
+.sb-row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sb-row .spacer { flex: 1; }
+.sb-op { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); flex: 1; min-width: 120px; }
+.sb-op input { flex: 1; min-width: 50px; }
+#sbOpacityVal { color: var(--accent); min-width: 30px; }
+
+.drop-hint {
+  position: absolute; inset: 0; z-index: 40; border-radius: 10px; pointer-events: none;
+  background: rgb(91 141 239 / 0.25); border: 3px dashed var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.drop-hint div { background: #11141b; padding: 8px 14px; border-radius: 16px; font-size: 13px; text-shadow: none; }
 
 /* ---------- 투명도 · 꾸미기 패널 ---------- */
 .panel {

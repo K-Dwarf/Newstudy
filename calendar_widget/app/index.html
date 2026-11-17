@@ -49,10 +49,34 @@
   <!-- '글자 앞' 스티커, 스티커 편집 층 -->
   <div id="stickersFront" class="sticker-layer front"></div>
   <div id="stickersEdit" class="sticker-layer edit hidden"></div>
-  <div id="editBar" class="edit-bar hidden">
-    <span>끌기: 이동 · 모서리: 크기 · ⇅ 글자 앞/뒤 · ✕ 삭제</span>
-    <button type="button" id="btnStickerAdd2">＋ 추가</button>
-    <button type="button" id="btnEditDone">완료</button>
+  <div id="dropHint" class="drop-hint hidden"><div>🖼️ 여기에 놓으면 스티커로 붙습니다</div></div>
+
+  <!-- 스티커 편집 도구 막대 -->
+  <div id="stickerBar" class="sticker-bar hidden">
+    <div id="sbHint" class="sb-hint">스티커를 눌러 선택하세요 · 이미지를 끌어다 놓거나 Ctrl+V 로 추가</div>
+    <div id="sbNote" class="sb-hint hidden">날짜에 붙인 스티커는 월 탭에서만 옮길 수 있습니다</div>
+    <div id="sbTools" class="sb-tools hidden">
+      <div class="sb-row">
+        <button type="button" data-act="flip" title="좌우 뒤집기">↔ 뒤집기</button>
+        <button type="button" data-act="reset" title="회전·뒤집기 처음대로">↺</button>
+        <button type="button" data-act="dup" title="복제 (Ctrl+D)">⧉ 복제</button>
+        <button type="button" data-act="top" title="다른 스티커보다 맨 앞으로">⤒</button>
+        <button type="button" data-act="bottom" title="다른 스티커보다 맨 뒤로">⤓</button>
+        <button type="button" data-act="del" class="danger" title="삭제 (Delete)">🗑</button>
+      </div>
+      <div class="sb-row">
+        <button type="button" data-act="layer">글자 앞</button>
+        <button type="button" data-act="date">📅 날짜에 붙이기</button>
+        <label class="sb-op">투명 <span id="sbOpacityVal"></span><input type="range" id="sbOpacity" min="0.1" max="1" step="0.05"></label>
+      </div>
+    </div>
+    <div class="sb-row">
+      <button type="button" id="sbAdd">＋ 파일</button>
+      <button type="button" id="sbUndo" title="되돌리기 (Ctrl+Z)">↶</button>
+      <button type="button" id="sbRedo" title="다시 하기 (Ctrl+Y)">↷</button>
+      <span class="spacer"></span>
+      <button type="button" id="sbDone" class="primary">완료</button>
+    </div>
   </div>
 
   <!-- 투명도 · 꾸미기 패널 -->
@@ -86,7 +110,7 @@
         <button type="button" id="btnStickerAdd">＋ 이미지 붙이기</button>
         <button type="button" id="btnStickerEdit" class="ghost">스티커 편집</button>
       </div>
-      <small>jpg · jpeg · png · gif(움직이는 그림 포함). 고른 이미지는 위젯 폴더에 복사돼서 원본을 옮겨도 그대로 보입니다.</small>
+      <small>jpg · png · gif · webp (움직이는 GIF·WebP 캐릭터도 움직임). 탐색기에서 위젯으로 <b>끌어다 놓거나</b>, 복사한 이미지를 <b>Ctrl+V</b> 로 붙여도 됩니다.</small>
     </div>
   </div>
 
@@ -155,5 +179,6 @@
   </dialog>
 
   <script src="app.js"></script>
+  <script src="decor-ui.js"></script>
 </body>
 </html>
