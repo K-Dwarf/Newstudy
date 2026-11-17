@@ -2,16 +2,21 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: decor:">
   <title>캘린더 위젯</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- 꾸미기: 배경 이미지와 '글자 뒤' 스티커 -->
+  <div id="bgLayer" class="hidden"></div>
+  <div id="stickersBack" class="sticker-layer"></div>
+
   <header class="titlebar">
     <div class="brand">📅 <span>내 캘린더</span><span id="modeTag" class="tag hidden">테스트</span></div>
     <div class="win-buttons">
       <button id="btnRefresh" title="새로고침">⟳</button>
-      <button id="btnPin" title="항상 위에 표시">📌</button>
+      <button id="btnDecor" title="투명도 · 꾸미기">🎨</button>
+      <button id="btnPin" title="항상 다른 창 위에 표시">📌</button>
       <button id="btnSettings" title="설정">⚙</button>
       <button id="btnMin" title="최소화">—</button>
       <button id="btnClose" title="닫기">✕</button>
@@ -41,6 +46,51 @@
     <button type="button" id="btnDetailAdd" class="ghost" title="자세히 추가">＋</button>
   </form>
 
+  <!-- '글자 앞' 스티커, 스티커 편집 층 -->
+  <div id="stickersFront" class="sticker-layer front"></div>
+  <div id="stickersEdit" class="sticker-layer edit hidden"></div>
+  <div id="editBar" class="edit-bar hidden">
+    <span>끌기: 이동 · 모서리: 크기 · ⇅ 글자 앞/뒤 · ✕ 삭제</span>
+    <button type="button" id="btnStickerAdd2">＋ 추가</button>
+    <button type="button" id="btnEditDone">완료</button>
+  </div>
+
+  <!-- 투명도 · 꾸미기 패널 -->
+  <div id="decorPanel" class="panel hidden">
+    <div class="panel-head"><b>투명도 · 꾸미기</b><button type="button" id="btnDecorClose" class="ghost small">✕</button></div>
+    <label>배경 투명도 <span id="bgOpacityVal" class="val"></span>
+      <input type="range" id="optBgOpacity" min="0" max="1" step="0.05">
+      <small>글자는 그대로 두고 위젯 바탕만 투명하게 (0%면 바탕화면이 그대로 보임)</small>
+    </label>
+    <label>창 전체 투명도 <span id="opacityVal" class="val"></span>
+      <input type="range" id="optOpacity" min="0.3" max="1" step="0.05">
+      <small>글자까지 함께 흐려짐</small>
+    </label>
+    <div class="panel-sec">
+      <div class="sec-title">배경 이미지</div>
+      <div class="row-buttons">
+        <button type="button" id="btnBgPick">이미지 고르기</button>
+        <button type="button" id="btnBgClear" class="ghost">지우기</button>
+      </div>
+      <div id="bgOptions">
+        <label>이미지 진하기 <span id="bgImgOpacityVal" class="val"></span><input type="range" id="optBgImgOpacity" min="0.1" max="1" step="0.05"></label>
+        <label>이미지 어둡게 (글자 잘 보이게) <span id="bgDimVal" class="val"></span><input type="range" id="optBgDim" min="0" max="0.9" step="0.05"></label>
+        <label>맞춤
+          <select id="optBgFit"><option value="cover">위젯을 꽉 채우기</option><option value="contain">이미지 전체 보이기</option></select>
+        </label>
+      </div>
+    </div>
+    <div class="panel-sec">
+      <div class="sec-title">스티커 <small id="stickerCount"></small></div>
+      <div class="row-buttons">
+        <button type="button" id="btnStickerAdd">＋ 이미지 붙이기</button>
+        <button type="button" id="btnStickerEdit" class="ghost">스티커 편집</button>
+      </div>
+      <small>jpg · jpeg · png · gif(움직이는 그림 포함). 고른 이미지는 위젯 폴더에 복사돼서 원본을 옮겨도 그대로 보입니다.</small>
+    </div>
+  </div>
+
+  <div id="grip" title="끌어서 크기 조절"></div>
   <div id="toast" class="toast hidden"></div>
 
   <dialog id="eventDlg">
@@ -96,8 +146,9 @@
         <div class="box-title">위젯</div>
         <label class="check"><input type="checkbox" id="optHolidays"> 대한민국 공휴일 표시</label>
         <label class="check"><input type="checkbox" id="optAutostart"> 윈도우 시작 시 자동 실행</label>
+        <label class="check"><input type="checkbox" id="optPinDesktop"> 바탕화면에 고정 (다른 창보다 항상 뒤, Win+D에도 유지)</label>
         <label class="check"><input type="checkbox" id="optOnTop"> 항상 다른 창 위에 표시</label>
-        <label>투명도 <input type="range" id="optOpacity" min="0.4" max="1" step="0.05"></label>
+        <p class="note">둘 중 하나만 켤 수 있습니다. 고정 중에는 작업표시줄 대신 오른쪽 아래 알림 영역(트레이)의 위젯 아이콘으로 불러오거나 종료합니다. 투명도와 꾸미기는 위쪽 🎨 버튼에 있습니다.</p>
       </section>
       <div class="dlg-buttons"><span class="spacer"></span><button>닫기</button></div>
     </form>

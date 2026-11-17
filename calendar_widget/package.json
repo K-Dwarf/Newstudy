@@ -8,10 +8,13 @@
   "scripts": {
     "start": "electron .",
     "demo": "electron . --demo",
-    "package:win": "electron-packager . CalendarWidget --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/test"
+    "package:win": "electron-packager . CalendarWidget --platform=win32 --arch=x64 --out=dist --overwrite --icon=assets/icon.ico --ignore=^/dist --ignore=^/test --ignore=\"/node_modules/koffi/build/koffi/(?!win32_x64)\" --ignore=\"/node_modules/koffi/(src|vendor|doc)\""
   },
   "devDependencies": {
     "@electron/packager": "20.3.0",
     "electron": "44.10.0"
+  },
+  "dependencies": {
+    "koffi": "2.15.6"
   }
 }

@@ -513,10 +513,15 @@ function refreshSettings() {
     $('#optAutostart').disabled = !state.prefs.packaged;
     $('#optAutostart').parentElement.title = state.prefs.packaged ? '' : '설치(패키징)된 프로그램에서만 설정할 수 있습니다.';
     $('#optOnTop').checked = state.prefs.alwaysOnTop;
+    $('#optPinDesktop').checked = state.prefs.pinDesktop;
+    $('#optPinDesktop').disabled = !state.prefs.pinSupported;
+    $('#optPinDesktop').parentElement.title = state.prefs.pinSupported ? '' : '윈도우에서만 쓸 수 있습니다.';
     $('#optHolidays').checked = state.prefs.showHolidays;
-    $('#optOpacity').value = state.prefs.opacity;
+    applyLookPrefs();
   }
   $('#btnPin').classList.toggle('on', !!state.prefs?.alwaysOnTop);
+  // 바탕화면 고정 중에는 최소화하면 다시 불러올 곳이 트레이뿐이라 최소화 버튼을 숨김
+  $('#btnMin').classList.toggle('hidden', !!state.prefs?.pinDesktop);
 }
 
 $('#btnImport').onclick = importClient;
@@ -532,9 +537,23 @@ $('#optAutostart').onchange = async (e) => {
   refreshSettings();
 };
 async function setOnTop(on) {
-  state.prefs.alwaysOnTop = await call(cal.setAlwaysOnTop, on);
+  try {
+    state.prefs = await call(cal.setAlwaysOnTop, on);
+  } catch (e) {
+    toast(e.message, true);
+  }
   refreshSettings();
 }
+async function setPinDesktop(on) {
+  try {
+    state.prefs = await call(cal.setPinDesktop, on);
+    toast(on ? '바탕화면에 고정했습니다. 다시 앞으로 부를 때는 트레이 아이콘을 누르세요.' : '바탕화면 고정을 해제했습니다.');
+  } catch (e) {
+    toast(e.message, true);
+  }
+  refreshSettings();
+}
+$('#optPinDesktop').onchange = (e) => setPinDesktop(e.target.checked);
 $('#optHolidays').onchange = async (e) => {
   state.prefs.showHolidays = await call(cal.setShowHolidays, e.target.checked).catch(() => e.target.checked);
   state.holidayWarned = false;
@@ -542,10 +561,6 @@ $('#optHolidays').onchange = async (e) => {
   load();
 };
 $('#optOnTop').onchange = (e) => setOnTop(e.target.checked);
-$('#optOpacity').oninput = (e) => {
-  cal.setOpacity(e.target.value);
-  state.prefs.opacity = Number(e.target.value);
-};
 $('#btnSettings').onclick = async () => {
   state.status = await call(cal.status).catch(() => state.status);
   refreshSettings();
@@ -576,6 +591,8 @@ $('#btnNext').onclick = () => step(1);
 $('#btnToday').onclick = () => setSel(state.today);
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && editMode) return setEditMode(false);
+  if (e.key === 'Escape' && !$('#decorPanel').classList.contains('hidden')) return $('#decorPanel').classList.add('hidden');
   if (dlg.open || $('#settingsDlg').open || e.target.matches('input, textarea, select')) return;
   if (e.key === 'ArrowLeft') step(-1);
   else if (e.key === 'ArrowRight') step(1);
@@ -585,7 +602,10 @@ document.addEventListener('keydown', (e) => {
 let resizeT;
 window.addEventListener('resize', () => {
   clearTimeout(resizeT);
-  resizeT = setTimeout(() => state.view === 'month' && render(), 120);
+  resizeT = setTimeout(() => {
+    if (state.view === 'month') render();
+    renderDecor();
+  }, 120);
 });
 
 // 자동 새로고침: 5분마다, 그리고 창을 다시 눌렀을 때(1분 이상 지났으면)
@@ -602,12 +622,258 @@ setInterval(() => {
 }, 60 * 1000);
 
 (async function init() {
-  state.prefs = await call(cal.prefs).catch(() => ({ alwaysOnTop: false, opacity: 1, autostart: false, showHolidays: true }));
+  state.prefs = await call(cal.prefs).catch(() => ({ alwaysOnTop: false, opacity: 1, bgOpacity: 0.92, autostart: false, showHolidays: true }));
   if (state.prefs.demo) $('#modeTag').classList.remove('hidden');
+  cal.onPrefs((p) => { state.prefs = p; refreshSettings(); });
+  state.decor = await call(cal.decorGet).catch(() => ({ background: null, stickers: [] }));
+  renderDecor();
   refreshSettings();
   await load();
   refreshSettings();
 })();
 
+// ---------- 투명도 ----------
+const pct = (v) => Math.round(Number(v) * 100) + '%';
+function applyLookPrefs() {
+  const p = state.prefs;
+  const a = Number.isFinite(p.bgOpacity) ? p.bgOpacity : 0.92;
+  document.documentElement.style.setProperty('--a', a);
+  document.body.classList.toggle('thin', a < 0.5 && !state.decor?.background);
+  $('#optBgOpacity').value = a;
+  $('#bgOpacityVal').textContent = pct(a);
+  $('#optOpacity').value = p.opacity;
+  $('#opacityVal').textContent = pct(p.opacity);
+}
+$('#optBgOpacity').oninput = (e) => {
+  state.prefs.bgOpacity = Number(e.target.value);
+  applyLookPrefs();
+  cal.setBgOpacity(e.target.value);
+};
+$('#optOpacity').oninput = (e) => {
+  state.prefs.opacity = Number(e.target.value);
+  applyLookPrefs();
+  cal.setOpacity(e.target.value);
+};
+$('#btnDecor').onclick = () => {
+  $('#decorPanel').classList.toggle('hidden');
+  renderDecorPanel();
+};
+$('#btnDecorClose').onclick = () => $('#decorPanel').classList.add('hidden');
+
+// ---------- 꾸미기: 배경 이미지 / 스티커 ----------
+state.decor = { background: null, stickers: [] };
+let editMode = false;
+const imgUrl = (file) => `decor://img/${encodeURIComponent(file)}`;
+
+let saveT;
+function saveDecor(now) {
+  clearTimeout(saveT);
+  const run = () => call(cal.decorSave, state.decor).catch((e) => toast(e.message, true));
+  if (now) return run();
+  saveT = setTimeout(run, 300);
+}
+
+function renderDecor() {
+  const bg = state.decor.background;
+  const layer = $('#bgLayer');
+  layer.replaceChildren();
+  layer.classList.toggle('hidden', !bg);
+  if (bg) {
+    const img = el('div', 'img');
+    img.style.backgroundImage = `url("${imgUrl(bg.file)}")`;
+    img.style.backgroundSize = bg.fit;
+    img.style.opacity = bg.opacity;
+    const dim = el('div', 'dim');
+    dim.style.opacity = bg.dim;
+    layer.append(img, dim);
+  }
+  if (state.prefs) applyLookPrefs();
+
+  const back = $('#stickersBack');
+  const front = $('#stickersFront');
+  const edit = $('#stickersEdit');
+  back.replaceChildren();
+  front.replaceChildren();
+  edit.replaceChildren();
+  for (const s of state.decor.stickers) {
+    const node = stickerNode(s);
+    if (editMode) edit.append(node);
+    else (s.back ? back : front).append(node);
+  }
+  renderDecorPanel();
+}
+
+function stickerNode(s) {
+  const d = el('div', 'sticker' + (s.back ? ' back' : ''));
+  d.style.left = s.x + 'px';
+  d.style.top = s.y + 'px';
+  d.style.width = s.w + 'px';
+  const img = el('img');
+  img.src = imgUrl(s.file);
+  img.alt = '';
+  d.append(img);
+  if (!editMode) return d;
+
+  const del = el('button', 'h del', '✕');
+  del.title = '스티커 삭제';
+  del.onclick = (e) => {
+    e.stopPropagation();
+    state.decor.stickers = state.decor.stickers.filter((x) => x !== s);
+    saveDecor(true);
+    renderDecor();
+  };
+  const lay = el('button', 'h lay', '⇅');
+  lay.title = s.back ? '지금: 글자 뒤 → 누르면 글자 앞으로' : '지금: 글자 앞 → 누르면 글자 뒤로';
+  lay.onclick = (e) => {
+    e.stopPropagation();
+    s.back = !s.back;
+    saveDecor();
+    renderDecor();
+    toast(s.back ? '글자 뒤로 보냈습니다.' : '글자 앞으로 꺼냈습니다.');
+  };
+  const rs = el('div', 'h rs');
+  rs.title = '끌어서 크기 조절';
+  d.append(del, lay, rs);
+
+  // 끌어서 이동 / 모서리로 크기 조절
+  d.addEventListener('pointerdown', (e) => {
+    if (e.target === del || e.target === lay) return;
+    e.preventDefault();
+    const resizing = e.target === rs;
+    const start = { x: e.clientX, y: e.clientY, sx: s.x, sy: s.y, sw: s.w };
+    d.setPointerCapture(e.pointerId);
+    const move = (ev) => {
+      if (resizing) {
+        s.w = Math.max(24, Math.min(window.innerWidth * 2, Math.round(start.sw + (ev.clientX - start.x))));
+        d.style.width = s.w + 'px';
+      } else {
+        s.x = Math.round(start.sx + ev.clientX - start.x);
+        s.y = Math.round(start.sy + ev.clientY - start.y);
+        d.style.left = s.x + 'px';
+        d.style.top = s.y + 'px';
+      }
+    };
+    const up = () => {
+      d.removeEventListener('pointermove', move);
+      d.removeEventListener('pointerup', up);
+      saveDecor();
+    };
+    d.addEventListener('pointermove', move);
+    d.addEventListener('pointerup', up);
+  });
+  return d;
+}
+
+function renderDecorPanel() {
+  const bg = state.decor.background;
+  $('#bgOptions').classList.toggle('hidden', !bg);
+  $('#btnBgClear').disabled = !bg;
+  if (bg) {
+    $('#optBgImgOpacity').value = bg.opacity;
+    $('#bgImgOpacityVal').textContent = pct(bg.opacity);
+    $('#optBgDim').value = bg.dim;
+    $('#bgDimVal').textContent = pct(bg.dim);
+    $('#optBgFit').value = bg.fit;
+  }
+  const n = state.decor.stickers.length;
+  $('#stickerCount').textContent = n ? `(${n}개)` : '';
+  $('#btnStickerEdit').disabled = !n;
+}
+
+function setEditMode(on) {
+  editMode = !!on;
+  $('#stickersEdit').classList.toggle('hidden', !editMode);
+  $('#editBar').classList.toggle('hidden', !editMode);
+  if (editMode) $('#decorPanel').classList.add('hidden');
+  renderDecor();
+}
+
+async function pickImage(title) {
+  try {
+    return await call(cal.decorPick, title);
+  } catch (e) {
+    toast(e.message, true);
+    return null;
+  }
+}
+
+$('#btnBgPick').onclick = async () => {
+  const r = await pickImage('배경 이미지 선택');
+  if (!r) return;
+  const old = state.decor.background;
+  state.decor.background = { file: r.file, opacity: old?.opacity ?? 1, dim: old?.dim ?? 0.35, fit: old?.fit || 'cover' };
+  await saveDecor(true);
+  renderDecor();
+};
+$('#btnBgClear').onclick = async () => {
+  state.decor.background = null;
+  await saveDecor(true);
+  renderDecor();
+};
+const bgSlider = (id, key) => {
+  $(id).oninput = (e) => {
+    if (!state.decor.background) return;
+    state.decor.background[key] = e.target.type === 'range' ? Number(e.target.value) : e.target.value;
+    renderDecor();
+    saveDecor();
+  };
+};
+bgSlider('#optBgImgOpacity', 'opacity');
+bgSlider('#optBgDim', 'dim');
+bgSlider('#optBgFit', 'fit');
+$('#optBgFit').onchange = $('#optBgFit').oninput;
+
+async function addSticker() {
+  const r = await pickImage('스티커로 붙일 이미지 선택');
+  if (!r) return;
+  const w = Math.min(140, Math.round(window.innerWidth * 0.35));
+  const n = state.decor.stickers.length;
+  state.decor.stickers.push({
+    id: Math.random().toString(16).slice(2, 10),
+    file: r.file,
+    x: Math.round(window.innerWidth / 2 - w / 2 + (n % 5) * 12),
+    y: Math.round(window.innerHeight / 3 + (n % 5) * 12),
+    w,
+    back: false,
+  });
+  await saveDecor(true);
+  setEditMode(true);
+}
+$('#btnStickerAdd').onclick = addSticker;
+$('#btnStickerAdd2').onclick = addSticker;
+$('#btnStickerEdit').onclick = () => setEditMode(true);
+$('#btnEditDone').onclick = () => setEditMode(false);
+
+// ---------- 크기 조절 손잡이 ----------
+(function grip() {
+  const g = $('#grip');
+  g.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    g.setPointerCapture(e.pointerId);
+    const start = { x: e.screenX, y: e.screenY, w: window.outerWidth, h: window.outerHeight };
+    let pending = null;
+    let busy = false;
+    const flush = async () => {
+      if (busy || !pending) return;
+      busy = true;
+      const p = pending;
+      pending = null;
+      await cal.resizeTo(p.w, p.h);
+      busy = false;
+      flush();
+    };
+    const move = (ev) => {
+      pending = { w: start.w + ev.screenX - start.x, h: start.h + ev.screenY - start.y };
+      flush();
+    };
+    const up = () => {
+      g.removeEventListener('pointermove', move);
+      g.removeEventListener('pointerup', up);
+    };
+    g.addEventListener('pointermove', move);
+    g.addEventListener('pointerup', up);
+  });
+})();
+
 // 테스트에서 쓰기 위해 노출
-window.__widget = { state, parseQuick, openEvent, setSel };
+window.__widget = { state, parseQuick, openEvent, setSel, renderDecor, setEditMode };
