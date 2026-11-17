@@ -8,7 +8,13 @@ const { shell } = require('electron');
 const store = require('./store');
 const { toGoogleBody, fromGoogleEvent } = require('./eventFormat');
 
-const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+// calendar.events   : 내 일정 보기/추가/수정/삭제
+// calendar.readonly : 공개 캘린더(대한민국 공휴일) 읽기
+const SCOPE_EVENTS = 'https://www.googleapis.com/auth/calendar.events';
+const SCOPE_READ = 'https://www.googleapis.com/auth/calendar.readonly';
+const SCOPE = `${SCOPE_EVENTS} ${SCOPE_READ}`;
+const HOLIDAY_CAL = 'ko.south_korea#holiday@group.v.calendar.google.com';
+const HOLIDAY_API = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(HOLIDAY_CAL)}/events`;
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
@@ -54,6 +60,8 @@ function status() {
     canEncrypt: store.canEncrypt(),
     hasClient: !!(s.clientId && s.clientSecret),
     connected: !!s.refreshToken,
+    // 로그인 때 공휴일 읽기 권한까지 허용했는지 (동의 화면에서 체크를 빼면 false)
+    holidayScope: !!s.refreshToken && String(s.grantedScope || '').includes(SCOPE_READ),
   };
 }
 
@@ -129,7 +137,7 @@ function login() {
           code_verifier: verifier,
         });
         if (!tok.refresh_token) throw new Error('refresh token 을 받지 못했습니다. 다시 시도해 주세요.');
-        store.saveSecure({ refreshToken: tok.refresh_token });
+        store.saveSecure({ refreshToken: tok.refresh_token, grantedScope: tok.scope || '' });
         accessToken = tok.access_token;
         accessExpires = Date.now() + (tok.expires_in - 60) * 1000;
         res.end(page('✅ 구글 캘린더 연결 완료'));
@@ -248,6 +256,33 @@ async function listEvents(timeMin, timeMax) {
   return out;
 }
 
+// 대한민국 공휴일 (구글 공개 캘린더). 같은 달은 다시 받지 않도록 6시간 동안 기억.
+const holidayCache = new Map();
+async function listHolidays(timeMin, timeMax) {
+  if (!status().holidayScope) {
+    const e = new Error('공휴일을 보려면 ⚙ 설정에서 로그아웃 후 다시 로그인해 주세요(공휴일 읽기 권한 필요).');
+    e.code = 'HOLIDAY_SCOPE';
+    throw e;
+  }
+  const key = timeMin + '|' + timeMax;
+  const hit = holidayCache.get(key);
+  if (hit && Date.now() - hit.at < 6 * 3600 * 1000) return hit.data;
+  const q = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250' });
+  const data = await api('GET', `${HOLIDAY_API}?${q}`);
+  const out = (data.items || [])
+    .filter((ev) => ev.start?.date)
+    .map((ev) => ({
+      name: ev.summary || '',
+      startDate: ev.start.date,
+      endDate: ev.end?.date || ev.start.date, // 마지막 날 다음 날(미포함)
+      // 구글 휴일 캘린더는 설명에 "공휴일"/"Public holiday" 또는 "기념일"/"Observance" 를 적어 둡니다.
+      // 설명이 없으면 공휴일로 봅니다.
+      isPublic: !/기념일|Observance/i.test(ev.description || ''),
+    }));
+  holidayCache.set(key, { at: Date.now(), data: out });
+  return out;
+}
+
 // 새로 만들 때는 null 항목을 뺌 (null 은 수정(PATCH) 때 "종일↔시간" 전환을 위해서만 필요)
 function stripNulls(obj) {
   return JSON.parse(JSON.stringify(obj, (_k, v) => (v === null ? undefined : v)));
@@ -273,6 +308,7 @@ module.exports = {
   login,
   logout,
   listEvents,
+  listHolidays,
   createEvent,
   updateEvent,
   deleteEvent,

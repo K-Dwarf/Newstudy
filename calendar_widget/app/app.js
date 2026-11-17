@@ -29,6 +29,8 @@ const state = {
   view: 'month', // 기본은 월 달력
   sel: todayYmd(),
   events: [],
+  holidays: {}, // 'YYYY-MM-DD' -> [{ name, isPublic }]
+  holidayWarned: false,
   range: null,
   status: null,
   prefs: null,
@@ -84,6 +86,19 @@ function timeText(ev, day) {
   return '하루 종일';
 }
 
+// ---------- 공휴일 ----------
+function holidayMap(list) {
+  const map = {};
+  for (const h of list) {
+    for (let d = h.startDate; d < h.endDate; d = addDays(d, 1)) {
+      (map[d] = map[d] || []).push({ name: h.name, isPublic: h.isPublic });
+    }
+  }
+  return map;
+}
+const holidaysOn = (day) => state.holidays[day] || [];
+const isRedDay = (day) => holidaysOn(day).some((h) => h.isPublic);
+
 // ---------- 불러오기 ----------
 async function load() {
   const my = ++state.loading;
@@ -97,9 +112,20 @@ async function load() {
     const r = rangeFor(state.view, state.sel);
     const timeMin = parseYmd(r.start).toISOString();
     const timeMax = parseYmd(addDays(r.start, r.days)).toISOString();
-    const events = await call(cal.list, timeMin, timeMax);
+    const holidayReq = state.prefs?.showHolidays
+      ? call(cal.holidays, timeMin, timeMax).catch((e) => {
+          // 공휴일을 못 받아도 내 일정은 그대로 보여 줌. 안내는 한 번만.
+          if (!state.holidayWarned) {
+            state.holidayWarned = true;
+            setTimeout(() => toast(e.message, true), 2500);
+          }
+          return [];
+        })
+      : Promise.resolve([]);
+    const [events, hols] = await Promise.all([call(cal.list, timeMin, timeMax), holidayReq]);
     if (my !== state.loading) return; // 더 최근 요청이 있으면 버림
     state.events = events;
+    state.holidays = holidayMap(hols);
     state.range = r;
     state.lastLoad = Date.now();
     render();
@@ -201,6 +227,13 @@ function renderMonth(view) {
     cell.classList.toggle('sat', w === 6);
     const head = el('div', 'cell-head');
     head.append(el('div', 'num', String(parseYmd(day).getDate())));
+    const hols = holidaysOn(day);
+    if (hols.length) {
+      const hn = el('div', 'hol-name' + (isRedDay(day) ? '' : ' observance'), hols.map((h) => h.name).join(', '));
+      hn.title = hn.textContent;
+      head.append(hn);
+      cell.classList.toggle('hol', isRedDay(day));
+    }
     cell.append(head);
     cell.onclick = () => setSel(day);
     cell.ondblclick = () => openEvent(null, day);
@@ -227,9 +260,11 @@ function renderMonth(view) {
 
 function dayList(container, day) {
   const w = dowOf(day);
-  const head = el('div', 'day-head' + (day === state.today ? ' today' : w === 0 ? ' sun' : w === 6 ? ' sat' : ''));
+  const red = w === 0 || isRedDay(day);
+  const head = el('div', 'day-head' + (day === state.today ? ' today' : red ? ' sun' : w === 6 ? ' sat' : ''));
   head.append(el('span', null, koDate(day)));
   if (day === state.today) head.append(el('span', 'sub', '오늘'));
+  for (const h of holidaysOn(day)) head.append(el('span', 'hol' + (h.isPublic ? '' : ' observance'), h.name));
   const add = el('button', 'add', '＋');
   add.title = '이 날짜에 일정 추가';
   add.onclick = () => openEvent(null, day);
@@ -447,6 +482,7 @@ async function doLogin() {
   toast('브라우저에서 구글 로그인을 진행해 주세요…');
   try {
     state.status = await call(cal.login);
+    state.holidayWarned = false;
     toast('구글 캘린더에 연결했습니다.');
     refreshSettings();
     load();
@@ -462,7 +498,9 @@ function refreshSettings() {
     p.textContent = '테스트 모드 (구글에 연결하지 않음)';
     p.className = 'state bad';
   } else if (s.connected) {
-    p.textContent = '✅ 연결됨 (기본 캘린더)';
+    p.textContent = s.holidayScope
+      ? '✅ 연결됨 (기본 캘린더 + 공휴일)'
+      : '✅ 연결됨 (기본 캘린더) · 공휴일을 보려면 로그아웃 후 다시 로그인';
     p.className = 'state ok';
   } else {
     p.textContent = s.hasClient ? '로그인 필요' : 'OAuth 클라이언트 JSON 파일을 먼저 불러와 주세요';
@@ -475,6 +513,7 @@ function refreshSettings() {
     $('#optAutostart').disabled = !state.prefs.packaged;
     $('#optAutostart').parentElement.title = state.prefs.packaged ? '' : '설치(패키징)된 프로그램에서만 설정할 수 있습니다.';
     $('#optOnTop').checked = state.prefs.alwaysOnTop;
+    $('#optHolidays').checked = state.prefs.showHolidays;
     $('#optOpacity').value = state.prefs.opacity;
   }
   $('#btnPin').classList.toggle('on', !!state.prefs?.alwaysOnTop);
@@ -496,6 +535,12 @@ async function setOnTop(on) {
   state.prefs.alwaysOnTop = await call(cal.setAlwaysOnTop, on);
   refreshSettings();
 }
+$('#optHolidays').onchange = async (e) => {
+  state.prefs.showHolidays = await call(cal.setShowHolidays, e.target.checked).catch(() => e.target.checked);
+  state.holidayWarned = false;
+  if (!state.prefs.showHolidays) state.holidays = {};
+  load();
+};
 $('#optOnTop').onchange = (e) => setOnTop(e.target.checked);
 $('#optOpacity').oninput = (e) => {
   cal.setOpacity(e.target.value);
@@ -557,7 +602,7 @@ setInterval(() => {
 }, 60 * 1000);
 
 (async function init() {
-  state.prefs = await call(cal.prefs).catch(() => ({ alwaysOnTop: false, opacity: 1, autostart: false }));
+  state.prefs = await call(cal.prefs).catch(() => ({ alwaysOnTop: false, opacity: 1, autostart: false, showHolidays: true }));
   if (state.prefs.demo) $('#modeTag').classList.remove('hidden');
   refreshSettings();
   await load();

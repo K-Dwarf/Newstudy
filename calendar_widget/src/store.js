@@ -33,6 +33,7 @@ function getSettings() {
     bounds: null,
     alwaysOnTop: false,
     opacity: 1,
+    showHolidays: true,
     ...readJson(settingsFile(), {}),
   };
 }

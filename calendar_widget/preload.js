@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('cal', {
   login: call('cal:login'),
   logout: call('cal:logout'),
   list: call('cal:list'),
+  holidays: call('cal:holidays'),
+  setShowHolidays: call('app:setShowHolidays'),
   create: call('cal:create'),
   update: call('cal:update'),
   remove: call('cal:delete'),

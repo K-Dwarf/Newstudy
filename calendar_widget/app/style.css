@@ -167,3 +167,12 @@ dialog textarea { resize: vertical; }
 
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: #3a4254; border-radius: 4px; }
+
+/* 공휴일 */
+.cell.hol .num { color: var(--sun); }
+.hol-name {
+  flex: 1; min-width: 0; margin-left: 3px; font-size: 10px; color: var(--sun);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hol-name.observance, .day-head .hol.observance { color: var(--muted); }
+.day-head .hol { font-size: 12px; font-weight: 400; color: var(--sun); }

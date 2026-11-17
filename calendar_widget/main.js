@@ -106,6 +106,7 @@ handle('cal:importClient', async () => {
 handle('cal:login', () => backend.login());
 handle('cal:logout', () => backend.logout());
 handle('cal:list', (timeMin, timeMax) => backend.listEvents(String(timeMin), String(timeMax)));
+handle('cal:holidays', (timeMin, timeMax) => backend.listHolidays(String(timeMin), String(timeMax)));
 handle('cal:create', (input) => backend.createEvent(input));
 handle('cal:update', (id, input) => backend.updateEvent(String(id), input));
 handle('cal:delete', (id) => backend.deleteEvent(String(id)));
@@ -115,6 +116,7 @@ handle('app:prefs', () => {
   return {
     alwaysOnTop: !!s.alwaysOnTop,
     opacity: Number(s.opacity) || 1,
+    showHolidays: s.showHolidays !== false,
     autostart: app.getLoginItemSettings().openAtLogin,
     packaged: app.isPackaged,
     demo: DEMO,
@@ -124,6 +126,7 @@ handle('app:setAutostart', (on) => {
   app.setLoginItemSettings({ openAtLogin: !!on });
   return app.getLoginItemSettings().openAtLogin;
 });
+handle('app:setShowHolidays', (on) => store.saveSettings({ showHolidays: !!on }).showHolidays);
 handle('win:alwaysOnTop', (on) => {
   win.setAlwaysOnTop(!!on);
   store.saveSettings({ alwaysOnTop: !!on });

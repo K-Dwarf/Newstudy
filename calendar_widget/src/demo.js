@@ -45,7 +45,23 @@ let connected = true;
 
 module.exports = {
   parseClientJson: () => ({ clientId: 'demo', clientSecret: 'demo' }),
-  status: () => ({ mode: 'demo', canEncrypt: true, hasClient: true, connected }),
+  status: () => ({ mode: 'demo', canEncrypt: true, hasClient: true, connected, holidayScope: connected }),
+  // 테스트용 공휴일: 날짜가 매년 같은 양력 공휴일만 넣음 (음력 공휴일·대체공휴일은 실제 연결 시 구글에서 받아옴)
+  async listHolidays(timeMin, timeMax) {
+    const a = new Date(timeMin);
+    const b = new Date(timeMax);
+    const out = [];
+    const fixed = [['01-01', '신정'], ['03-01', '삼일절'], ['05-05', '어린이날'], ['05-08', '어버이날', false],
+      ['06-06', '현충일'], ['08-15', '광복절'], ['10-03', '개천절'], ['10-09', '한글날'], ['12-25', '기독탄신일']];
+    for (let y = a.getFullYear(); y <= b.getFullYear(); y++) {
+      for (const [mdStr, name, isPublic = true] of fixed) {
+        const startDate = `${y}-${mdStr}`;
+        const d = new Date(startDate + 'T00:00:00');
+        if (d >= a && d < b) out.push({ name, startDate, endDate: addDays(startDate, 1), isPublic });
+      }
+    }
+    return out;
+  },
   setClient() {
     return this.status();
   },
