@@ -67,6 +67,9 @@ module.exports = {
   setClient() {
     return this.status();
   },
+  clearClient() {
+    return this.status();
+  },
   async login() {
     connected = true;
     return this.status();

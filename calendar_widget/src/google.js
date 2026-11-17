@@ -3,6 +3,8 @@
 // - 로그인: "데스크톱 앱" OAuth 클라이언트 + 루프백(127.0.0.1) 리디렉션 + PKCE
 // - 일정: Calendar API v3 의 기본 캘린더(primary) 일정 조회/추가/수정/삭제
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const { shell } = require('electron');
 const store = require('./store');
@@ -53,12 +55,38 @@ function parseClientJson(text) {
   return { clientId: c.client_id, clientSecret: c.client_secret };
 }
 
+// 프로그램에 내장된 OAuth 클라이언트 (배포용 빌드에서 scripts/prepare-client.js 가 만들어 넣음.
+// 저장소에는 올라가지 않음 - .gitignore). 없으면 사용자가 직접 JSON 을 불러와야 함.
+let embedded;
+function embeddedClient() {
+  if (embedded !== undefined) return embedded;
+  embedded = null;
+  try {
+    const file = path.join(__dirname, '..', 'embedded-client.json');
+    if (fs.existsSync(file)) embedded = parseClientJson(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    console.error('[google] 내장 클라이언트를 읽지 못했습니다:', e.message);
+  }
+  return embedded;
+}
+
+// 쓸 클라이언트: 직접 불러온 JSON > 내장 JSON
+function client() {
+  const s = store.getSecure();
+  if (s.clientId && s.clientSecret) return { clientId: s.clientId, clientSecret: s.clientSecret, source: 'user' };
+  const e = embeddedClient();
+  return e ? { ...e, source: 'embedded' } : null;
+}
+
 function status() {
   const s = store.getSecure();
+  const c = client();
   return {
     mode: 'google',
     canEncrypt: store.canEncrypt(),
-    hasClient: !!(s.clientId && s.clientSecret),
+    hasClient: !!c,
+    clientSource: c ? c.source : null, // 'user' | 'embedded'
+    hasEmbedded: !!embeddedClient(),
     connected: !!s.refreshToken,
     // 로그인 때 공휴일 읽기 권한까지 허용했는지 (동의 화면에서 체크를 빼면 false)
     holidayScope: !!s.refreshToken && String(s.grantedScope || '').includes(SCOPE_READ),
@@ -72,8 +100,30 @@ function setClient({ clientId, clientSecret }) {
   return status();
 }
 
+// 직접 불러온 JSON 을 지우고 내장 클라이언트로 되돌림
+function clearClient() {
+  store.saveSecure({ clientId: null, clientSecret: null, refreshToken: null });
+  accessToken = null;
+  return status();
+}
+
+// 인터넷이 안 될 때(컴퓨터를 막 켰을 때 등)는 로그아웃으로 처리하지 않고 이 오류로 알림
+class OfflineError extends Error {
+  constructor() {
+    super('인터넷에 연결되지 않았습니다. 연결되면 자동으로 다시 불러옵니다.');
+    this.code = 'OFFLINE';
+  }
+}
+async function safeFetch(url, opts) {
+  try {
+    return await fetch(url, opts);
+  } catch {
+    throw new OfflineError();
+  }
+}
+
 async function postForm(url, params) {
-  const res = await fetch(url, {
+  const res = await safeFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(params).toString(),
@@ -89,8 +139,8 @@ async function postForm(url, params) {
 
 function login() {
   if (loginInProgress) return loginInProgress;
-  const s = store.getSecure();
-  if (!s.clientId) return Promise.reject(new Error('먼저 OAuth 클라이언트 JSON 파일을 불러와 주세요.'));
+  const s = client();
+  if (!s) return Promise.reject(new Error('먼저 OAuth 클라이언트 JSON 파일을 불러와 주세요.'));
 
   loginInProgress = new Promise((resolve, reject) => {
     const verifier = b64url(crypto.randomBytes(32));
@@ -188,11 +238,12 @@ async function logout() {
 async function getAccessToken(force = false) {
   if (!force && accessToken && Date.now() < accessExpires) return accessToken;
   const s = store.getSecure();
-  if (!s.refreshToken) throw new NeedsLoginError();
+  const c = client();
+  if (!s.refreshToken || !c) throw new NeedsLoginError();
   try {
     const tok = await postForm(TOKEN_URL, {
-      client_id: s.clientId,
-      client_secret: s.clientSecret,
+      client_id: c.clientId,
+      client_secret: c.clientSecret,
       refresh_token: s.refreshToken,
       grant_type: 'refresh_token',
     });
@@ -200,7 +251,9 @@ async function getAccessToken(force = false) {
     accessExpires = Date.now() + (tok.expires_in - 60) * 1000;
     return accessToken;
   } catch (e) {
-    if (e.oauthError === 'invalid_grant') {
+    // invalid_grant: 권한 해제·만료 (동의 화면이 "테스트" 상태면 7일마다)
+    // invalid_client / unauthorized_client: 등록증이 바뀌었거나 삭제됨
+    if (['invalid_grant', 'invalid_client', 'unauthorized_client'].includes(e.oauthError)) {
       // 동의 화면이 "테스트" 상태면 7일마다 이렇게 됩니다.
       store.saveSecure({ refreshToken: null });
       accessToken = null;
@@ -213,7 +266,7 @@ async function getAccessToken(force = false) {
 async function api(method, url, body) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const token = await getAccessToken(attempt > 0);
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -316,6 +369,7 @@ module.exports = {
   parseClientJson,
   status,
   setClient,
+  clearClient,
   login,
   logout,
   listEvents,

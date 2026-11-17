@@ -8,13 +8,63 @@
   "scripts": {
     "start": "electron .",
     "demo": "electron . --demo",
-    "package:win": "electron-packager . CalendarWidget --platform=win32 --arch=x64 --out=dist --overwrite --icon=assets/icon.ico --ignore=^/dist --ignore=^/test --ignore=\"/node_modules/koffi/build/koffi/(?!win32_x64)\" --ignore=\"/node_modules/koffi/(src|vendor|doc)\""
+    "dist": "node scripts/prepare-client.js && electron-builder --win nsis --x64"
   },
   "devDependencies": {
-    "@electron/packager": "20.3.0",
-    "electron": "44.10.0"
+    "electron": "44.10.0",
+    "electron-builder": "26.18.1"
   },
   "dependencies": {
     "koffi": "2.15.6"
+  },
+  "author": "CalendarWidget",
+  "build": {
+    "appId": "app.calendarwidget.desktop",
+    "productName": "CalendarWidget",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!scripts/**",
+      "!build/**",
+      "!README.md",
+      "!client_secret*.json",
+      "!credentials*.json",
+      "!oauth-client.json",
+      "!node_modules/koffi/build/koffi/!(win32_x64)/**",
+      "!node_modules/koffi/{src,vendor,doc,lib}/**",
+      "!node_modules/koffi/build/koffi/win32_x64/*.{lib,exp}"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/build/**/*.node"
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "캘린더 위젯",
+      "uninstallDisplayName": "캘린더 위젯",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "language": "1042",
+      "include": "build/installer.nsh",
+      "artifactName": "CalendarWidget-Setup-${version}.exe"
+    }
   }
 }

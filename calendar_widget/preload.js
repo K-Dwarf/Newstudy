@@ -6,6 +6,7 @@ const call = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 contextBridge.exposeInMainWorld('cal', {
   status: call('cal:status'),
   importClient: call('cal:importClient'),
+  clearClient: call('cal:clearClient'),
   login: call('cal:login'),
   logout: call('cal:logout'),
   list: call('cal:list'),

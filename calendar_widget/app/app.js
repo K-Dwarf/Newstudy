@@ -142,12 +142,21 @@ async function load() {
     state.holidays = holidayMap(hols);
     state.range = r;
     state.lastLoad = Date.now();
+    state.offlineWarned = false;
     render();
   } catch (e) {
     if (my !== state.loading) return;
     if (e.code === 'NEEDS_LOGIN') {
       state.status = await call(cal.status).catch(() => state.status);
       render();
+    }
+    if (e.code === 'OFFLINE') {
+      // 컴퓨터를 막 켜서 인터넷이 아직 안 붙었을 때: 안내는 한 번만, 30초 뒤 다시 시도
+      if (!state.offlineWarned) toast(e.message, true);
+      state.offlineWarned = true;
+      clearTimeout(state.retryT);
+      state.retryT = setTimeout(load, 30 * 1000);
+      return;
     }
     toast(e.message, true);
   }
@@ -203,19 +212,23 @@ function connectBanner() {
     b.append(el('p', null, '이 PC에서 암호화 저장을 쓸 수 없어 로그인 정보를 저장할 수 없습니다.'));
     return b;
   }
-  b.append(
-    el('div', null, s.hasClient
-      ? '✅ OAuth 클라이언트 등록됨. 이제 구글 로그인을 눌러 주세요.'
-      : '① 구글 클라우드 콘솔에서 받은 OAuth 클라이언트(데스크톱 앱) JSON 파일을 불러오고, ② 구글 로그인을 하면 됩니다. 자세한 순서는 README의 "구글 설정" 부분을 보세요.'),
-  );
   const rb = el('div', 'row-buttons');
-  const imp = el('button', null, '① JSON 파일 불러오기');
-  imp.onclick = importClient;
-  const login = el('button', null, '② 구글 로그인');
-  login.disabled = !s.hasClient;
-  login.onclick = doLogin;
-  rb.append(imp, login);
+  if (s.hasEmbedded || s.hasClient) {
+    // 등록증이 준비돼 있으면 로그인 버튼 하나만
+    b.append(el('div', null, '구글 계정으로 로그인하면 일정이 표시됩니다. 한 번 로그인하면 컴퓨터를 껐다 켜도 로그인 상태가 유지됩니다.'));
+    const login = el('button', 'primary-btn', '구글 로그인');
+    login.onclick = doLogin;
+    rb.append(login);
+  } else {
+    b.append(el('div', null, '① 구글 클라우드 콘솔에서 받은 OAuth 클라이언트(데스크톱 앱) JSON 파일을 불러오고, ② 구글 로그인을 하면 됩니다. 자세한 순서는 README의 "구글 설정" 부분을 보세요.'));
+    const imp = el('button', null, '① JSON 파일 불러오기');
+    imp.onclick = importClient;
+    const login = el('button', null, '② 구글 로그인');
+    login.disabled = true;
+    rb.append(imp, login);
+  }
   b.append(rb);
+  b.append(el('p', 'note', '로그인 화면에 "Google에서 확인하지 않은 앱"이 나오면 [고급] → [(앱 이름)(으)로 이동]을 누르고, 권한 두 개를 모두 체크하세요.'));
   return b;
 }
 
@@ -542,7 +555,16 @@ function refreshSettings() {
     p.textContent = s.hasClient ? '로그인 필요' : 'OAuth 클라이언트 JSON 파일을 먼저 불러와 주세요';
     p.className = 'state bad';
   }
+  // 어떤 등록증(OAuth 클라이언트)을 쓰는지
+  const src = $('#clientSource');
+  if (s.mode === 'demo') src.textContent = '';
+  else if (s.clientSource === 'user') src.textContent = '등록증: 직접 불러온 JSON 사용 중';
+  else if (s.clientSource === 'embedded') src.textContent = '등록증: 프로그램에 내장된 등록증 사용 중';
+  else src.textContent = '등록증: 없음';
+  $('#btnImport').textContent = s.hasEmbedded ? '다른 등록증(JSON) 불러오기' : 'OAuth 클라이언트 JSON 불러오기';
+  $('#btnClearClient').classList.toggle('hidden', !(s.hasEmbedded && s.clientSource === 'user'));
   $('#btnLogin').disabled = !s.hasClient;
+  $('#appVersion').textContent = state.prefs?.version ? `버전 ${state.prefs.version}` : '';
   $('#btnLogout').disabled = !s.connected;
   if (state.prefs) {
     $('#optAutostart').checked = state.prefs.autostart;
@@ -561,6 +583,12 @@ function refreshSettings() {
 }
 
 $('#btnImport').onclick = importClient;
+$('#btnClearClient').onclick = async () => {
+  if (!confirm('직접 불러온 등록증을 지우고 내장 등록증으로 되돌릴까요? (다시 로그인해야 합니다)')) return;
+  state.status = await call(cal.clearClient).catch((e) => toast(e.message, true));
+  refreshSettings();
+  load();
+};
 $('#btnLogin').onclick = doLogin;
 $('#btnLogout').onclick = async () => {
   if (!confirm('구글 캘린더 연결을 해제할까요? (구글 계정의 위젯 권한도 해제됩니다)')) return;
@@ -647,6 +675,7 @@ window.addEventListener('resize', () => {
 
 // 자동 새로고침: 5분마다, 그리고 창을 다시 눌렀을 때(1분 이상 지났으면)
 setInterval(load, 5 * 60 * 1000);
+window.addEventListener('online', () => load()); // 인터넷이 연결되는 순간 다시 불러옴
 cal.onFocus(() => { if (Date.now() - state.lastLoad > 60 * 1000) load(); });
 // 날짜가 바뀌면 "오늘" 표시 갱신
 setInterval(() => {

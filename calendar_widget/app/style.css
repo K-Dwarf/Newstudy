@@ -295,3 +295,6 @@ input[type=range] { padding: 0; accent-color: var(--accent); }
 .presets { display: flex; gap: 4px; }
 .presets button { flex: 1; padding: 4px 6px; font-size: 12px; }
 .presets button.on { border-color: var(--accent); color: #cfe0ff; }
+
+.banner .note { margin-top: 10px; }
+.primary-btn { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 6px 16px; }

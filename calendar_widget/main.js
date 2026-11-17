@@ -5,6 +5,9 @@ const fs = require('fs');
 const { app, BrowserWindow, ipcMain, dialog, shell, screen, Tray, Menu, nativeImage } = require('electron');
 
 const DEMO = process.argv.includes('--demo') || process.env.CAL_WIDGET_DEMO === '1';
+// 윈도우 앱 ID. 자동 실행 등록 이름도 이 값이 됨 (설치 프로그램이 지울 때 같은 이름으로 정리 - build/installer.nsh)
+const APP_ID = 'app.calendarwidget.desktop';
+app.setAppUserModelId(APP_ID);
 if (DEMO) app.setPath('userData', path.join(app.getPath('temp'), 'calendar-widget-demo'));
 
 const store = require('./src/store');
@@ -49,6 +52,7 @@ function prefs() {
     autostart: app.getLoginItemSettings().openAtLogin,
     packaged: app.isPackaged,
     demo: DEMO,
+    version: app.getVersion(),
   };
 }
 
@@ -243,6 +247,7 @@ handle('cal:importClient', async () => {
   const text = fs.readFileSync(r.filePaths[0], 'utf8');
   return backend.setClient(backend.parseClientJson(text));
 });
+handle('cal:clearClient', () => backend.clearClient());
 handle('cal:login', () => backend.login());
 handle('cal:logout', () => backend.logout());
 handle('cal:list', (timeMin, timeMax) => backend.listEvents(String(timeMin), String(timeMax)));
@@ -308,7 +313,16 @@ handle('decor:pick', (title) => decor.pickImage(win, String(title || '')));
 handle('decor:importPath', (p) => decor.importPath(p));
 handle('decor:importBytes', (data) => decor.importBytes(data));
 
+// 설치된 정식 버전을 처음 실행할 때 "윈도우 시작 시 자동 실행"을 켬 (이후에는 설정에서 바꾼 대로 유지)
+function firstRunAutostart() {
+  if (!app.isPackaged || DEMO || process.platform !== 'win32') return;
+  if (store.getSettings().autostartInitialized) return;
+  app.setLoginItemSettings({ openAtLogin: true });
+  store.saveSettings({ autostartInitialized: true });
+}
+
 app.whenReady().then(() => {
+  firstRunAutostart();
   decor.handleProtocol();
   createWindow();
   createTray();
