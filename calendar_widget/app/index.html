@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>캘린더 위젯</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand">📅 <span>내 캘린더</span><span id="modeTag" class="tag hidden">테스트</span></div>
+    <div class="win-buttons">
+      <button id="btnRefresh" title="새로고침">⟳</button>
+      <button id="btnPin" title="항상 위에 표시">📌</button>
+      <button id="btnSettings" title="설정">⚙</button>
+      <button id="btnMin" title="최소화">—</button>
+      <button id="btnClose" title="닫기">✕</button>
+    </div>
+  </header>
+
+  <nav class="toolbar">
+    <div class="tabs" role="tablist">
+      <button data-view="day" role="tab">오늘</button>
+      <button data-view="week" role="tab">주</button>
+      <button data-view="month" role="tab">월</button>
+    </div>
+    <div class="nav">
+      <button id="btnPrev" title="이전">‹</button>
+      <span id="rangeLabel"></span>
+      <button id="btnNext" title="다음">›</button>
+      <button id="btnToday" class="small">오늘</button>
+    </div>
+  </nav>
+
+  <main id="view"></main>
+
+  <form id="quickForm" class="quick" autocomplete="off">
+    <span id="quickDate" class="quick-date"></span>
+    <input id="quickText" placeholder="빠른 추가 (예: 14:00 회의, 내일 오후 3시 방문)" maxlength="200">
+    <button type="submit">추가</button>
+    <button type="button" id="btnDetailAdd" class="ghost" title="자세히 추가">＋</button>
+  </form>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <dialog id="eventDlg">
+    <form id="eventForm" method="dialog">
+      <h3 id="eventDlgTitle">일정</h3>
+      <label>제목<input name="title" required maxlength="300"></label>
+      <label class="check"><input type="checkbox" name="allDay"> 종일</label>
+      <div class="row">
+        <label>시작<input type="date" name="startDate" required></label>
+        <label class="time">&nbsp;<input type="time" name="startTime"></label>
+      </div>
+      <div class="row">
+        <label>종료<input type="date" name="endDate" required></label>
+        <label class="time">&nbsp;<input type="time" name="endTime"></label>
+      </div>
+      <label>알림 (휴대폰 구글 캘린더 앱에도 울림)
+        <select name="reminder">
+          <option value="default">캘린더 기본 알림</option>
+          <option value="none">알림 없음</option>
+          <option value="0">시작할 때</option>
+          <option value="10">10분 전</option>
+          <option value="30">30분 전</option>
+          <option value="60">1시간 전</option>
+          <option value="1440">하루 전</option>
+        </select>
+      </label>
+      <label>메모<textarea name="description" rows="3" maxlength="4000"></textarea></label>
+      <p id="recurNote" class="note hidden">반복 일정입니다. 여기서 바꾸거나 지우면 이 날짜 일정만 바뀝니다.</p>
+      <div class="dlg-buttons">
+        <button type="button" id="btnDelete" class="danger">삭제</button>
+        <button type="button" id="btnOpenGoogle" class="ghost">구글에서 열기</button>
+        <span class="spacer"></span>
+        <button type="button" id="btnCancel" class="ghost">취소</button>
+        <button type="submit" id="btnSave">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDlg">
+    <form method="dialog">
+      <h3>설정</h3>
+      <section class="box">
+        <div class="box-title">구글 캘린더 연결</div>
+        <p id="connState" class="state"></p>
+        <div class="row-buttons">
+          <button type="button" id="btnImport">① OAuth 클라이언트 JSON 불러오기</button>
+          <button type="button" id="btnLogin">② 구글 로그인</button>
+          <button type="button" id="btnLogout" class="ghost">로그아웃</button>
+        </div>
+        <p class="note">비밀 값(JSON 파일 내용, 토큰)은 이 PC 안에 암호화해서만 저장됩니다. 채팅이나 다른 곳에 붙여넣지 마세요.</p>
+      </section>
+      <section class="box">
+        <div class="box-title">위젯</div>
+        <label class="check"><input type="checkbox" id="optAutostart"> 윈도우 시작 시 자동 실행</label>
+        <label class="check"><input type="checkbox" id="optOnTop"> 항상 다른 창 위에 표시</label>
+        <label>투명도 <input type="range" id="optOpacity" min="0.4" max="1" step="0.05"></label>
+      </section>
+      <div class="dlg-buttons"><span class="spacer"></span><button>닫기</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

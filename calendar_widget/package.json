@@ -1,0 +1,17 @@
+{
+  "name": "calendar-widget",
+  "productName": "CalendarWidget",
+  "version": "1.0.0",
+  "description": "윈도우 바탕화면용 구글 캘린더 위젯 (일정 추가/수정/삭제)",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "package:win": "electron-packager . CalendarWidget --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/test"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "44.10.0"
+  }
+}
