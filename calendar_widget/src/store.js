@@ -34,6 +34,7 @@ function getSettings() {
     alwaysOnTop: false,
     opacity: 1,
     showHolidays: true,
+    readable: true, // 글자 뒤 받침 유지 (가독성 보호)
     ...readJson(settingsFile(), {}),
   };
 }

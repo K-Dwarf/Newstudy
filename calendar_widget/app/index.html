@@ -14,26 +14,29 @@
   <header class="titlebar">
     <div class="brand">📅 <span>내 캘린더</span><span id="modeTag" class="tag hidden">테스트</span></div>
     <div class="win-buttons">
-      <button id="btnRefresh" title="새로고침">⟳</button>
-      <button id="btnDecor" title="투명도 · 꾸미기">🎨</button>
-      <button id="btnPin" title="항상 다른 창 위에 표시">📌</button>
-      <button id="btnSettings" title="설정">⚙</button>
-      <button id="btnMin" title="최소화">—</button>
-      <button id="btnClose" title="닫기">✕</button>
+      <button id="btnRefresh" title="새로고침 (F5)" aria-label="새로고침">⟳</button>
+      <button id="btnDecor" title="투명도 · 꾸미기" aria-label="투명도와 꾸미기">🎨</button>
+      <button id="btnPin" title="항상 다른 창 위에 표시" aria-label="항상 다른 창 위에 표시">📌</button>
+      <button id="btnSettings" title="설정" aria-label="설정">⚙</button>
+      <!-- 창 동작 버튼은 따로 묶어서 구분 -->
+      <div class="win-ctrl">
+        <button id="btnMin" title="최소화" aria-label="최소화">—</button>
+        <button id="btnClose" title="닫기 (위젯 종료)" aria-label="닫기">✕</button>
+      </div>
     </div>
   </header>
 
   <nav class="toolbar">
     <div class="tabs" role="tablist">
-      <button data-view="day" role="tab">오늘</button>
-      <button data-view="week" role="tab">주</button>
-      <button data-view="month" role="tab">월</button>
+      <button data-view="day" role="tab" title="오늘 일정">오늘</button>
+      <button data-view="week" role="tab" title="이번 주 일정">주</button>
+      <button data-view="month" role="tab" title="월 달력">월</button>
     </div>
     <div class="nav">
-      <button id="btnPrev" title="이전">‹</button>
-      <span id="rangeLabel"></span>
-      <button id="btnNext" title="다음">›</button>
-      <button id="btnToday" class="small">오늘</button>
+      <button id="btnPrev" title="이전 (←)" aria-label="이전">‹</button>
+      <span id="rangeLabel" aria-live="polite"></span>
+      <button id="btnNext" title="다음 (→)" aria-label="다음">›</button>
+      <button id="btnToday" class="small" title="오늘 날짜로 이동">오늘</button>
     </div>
   </nav>
 
@@ -82,6 +85,14 @@
   <!-- 투명도 · 꾸미기 패널 -->
   <div id="decorPanel" class="panel hidden">
     <div class="panel-head"><b>투명도 · 꾸미기</b><button type="button" id="btnDecorClose" class="ghost small">✕</button></div>
+    <div class="presets" role="group" aria-label="투명도 프리셋">
+      <button type="button" data-preset="readable" title="불투명 바탕 + 글자 받침, 배경 이미지는 어둡게">가독성 우선</button>
+      <button type="button" data-preset="balanced" title="바탕화면이 살짝 비치면서 글자는 받침으로 보호">균형</button>
+      <button type="button" data-preset="clear" title="바탕화면이 많이 보임 (글자 그림자만)">투명하게</button>
+    </div>
+    <label class="check"><input type="checkbox" id="optReadable"> 글자 뒤 받침 유지 (가독성 보호)
+      <small>투명하게 하거나 배경 이미지를 깔아도 달력·일정 글자 뒤에 반투명 받침을 남깁니다</small>
+    </label>
     <label>배경 투명도 <span id="bgOpacityVal" class="val"></span>
       <input type="range" id="optBgOpacity" min="0" max="1" step="0.05">
       <small>글자는 그대로 두고 위젯 바탕만 투명하게 (0%면 바탕화면이 그대로 보임)</small>

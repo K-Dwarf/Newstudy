@@ -8,16 +8,81 @@
 // =====================================================================
 const pct = (v) => Math.round(Number(v) * 100) + '%';
 
+// 투명도 + 가독성 보호
+//  - 배경 투명도(a): 위젯 바탕색의 불투명도
+//  - 가독성 보호(readable): 바탕이 투명하거나 배경 이미지가 있어도, 달력·목록 글자 뒤에
+//    합쳐서 약 62% 이상 불투명한 받침이 남도록 받침(--plate)을 더함. 제목줄·입력줄·일정 카드도 최소 불투명도 보장
 function applyLookPrefs() {
   const p = state.prefs;
   const a = Number.isFinite(p.bgOpacity) ? p.bgOpacity : 0.92;
-  document.documentElement.style.setProperty('--a', a);
-  document.body.classList.toggle('thin', a < 0.5 && !state.decor?.background);
+  const readable = p.readable !== false;
+  const bg = state.decor?.background;
+  let barA = 0.2 + a * 0.8;
+  let rowA = 0.35 + a * 0.65;
+  let plate = 0;
+  if (readable) {
+    const target = 0.62;
+    plate = a < 1 ? Math.max(0, 1 - (1 - target) / (1 - a)) : 0;
+    if (bg) {
+      // 배경 이미지가 글자 뒤에서 보이는 정도(진하기 × (1-어둡게))에 비례해 받침을 더함
+      const imgVis = bg.opacity * (1 - bg.dim);
+      plate = Math.max(plate, Math.min(0.6, imgVis * 0.6));
+    }
+    barA = Math.max(barA, 0.75);
+    rowA = Math.max(rowA, 0.8);
+  }
+  const root = document.documentElement.style;
+  root.setProperty('--a', a);
+  root.setProperty('--plate', plate.toFixed(3));
+  root.setProperty('--bar-a', barA.toFixed(3));
+  root.setProperty('--row-a', rowA.toFixed(3));
+  // 받침이 약할 때만 글자 그림자로 보조
+  document.body.classList.toggle('thin', !readable && (a < 0.5 || !!bg));
   $('#optBgOpacity').value = a;
   $('#bgOpacityVal').textContent = pct(a);
   $('#optOpacity').value = p.opacity;
   $('#opacityVal').textContent = pct(p.opacity);
+  $('#optReadable').checked = readable;
+  // 지금 값이 프리셋과 같으면 그 버튼 표시
+  const cur = presetNow();
+  document.querySelectorAll('.presets [data-preset]').forEach((b) => b.classList.toggle('on', b.dataset.preset === cur));
 }
+
+const PRESETS = {
+  readable: { bgOpacity: 0.95, opacity: 1, readable: true, dim: 0.55 },
+  balanced: { bgOpacity: 0.7, opacity: 1, readable: true, dim: 0.4 },
+  clear: { bgOpacity: 0.2, opacity: 1, readable: false, dim: 0.3 },
+};
+function presetNow() {
+  const p = state.prefs;
+  const bg = state.decor?.background;
+  for (const [k, v] of Object.entries(PRESETS)) {
+    if (Math.abs(p.bgOpacity - v.bgOpacity) < 0.001 && Math.abs(p.opacity - v.opacity) < 0.001 &&
+        (p.readable !== false) === v.readable && (!bg || Math.abs(bg.dim - v.dim) < 0.001)) return k;
+  }
+  return null;
+}
+async function applyPreset(name) {
+  const v = PRESETS[name];
+  if (!v) return;
+  Object.assign(state.prefs, { bgOpacity: v.bgOpacity, opacity: v.opacity, readable: v.readable });
+  await Promise.all([cal.setBgOpacity(v.bgOpacity), cal.setOpacity(v.opacity), cal.setReadable(v.readable)]);
+  if (state.decor.background) {
+    state.decor.background.dim = v.dim;
+    renderBackground();
+    renderDecorPanel();
+    saveDecor();
+  }
+  applyLookPrefs();
+}
+document.querySelectorAll('.presets [data-preset]').forEach((b) => {
+  b.onclick = () => applyPreset(b.dataset.preset);
+});
+$('#optReadable').onchange = (e) => {
+  state.prefs.readable = e.target.checked;
+  cal.setReadable(e.target.checked);
+  applyLookPrefs();
+};
 $('#optBgOpacity').oninput = (e) => {
   state.prefs.bgOpacity = Number(e.target.value);
   applyLookPrefs();
@@ -131,6 +196,7 @@ for (const [id, key] of [['#optBgImgOpacity', 'opacity'], ['#optBgDim', 'dim'], 
     if (!state.decor.background) return;
     state.decor.background[key] = e.target.type === 'range' ? Number(e.target.value) : e.target.value;
     renderBackground();
+    applyLookPrefs();
     renderDecorPanel();
     saveDecor();
   };

@@ -59,7 +59,19 @@ async function call(fn, ...args) {
   return r.data;
 }
 
-function colorOf(ev) { return COLORS[ev.colorId] || DEFAULT_COLOR; }
+// 일정 색: 일정에 지정한 색 → 내 구글 캘린더 색 → 기본 파랑
+function colorOf(ev) { return COLORS[ev.colorId] || state.calColor || DEFAULT_COLOR; }
+
+// 배경색 위에서 흰 글자와 어두운 글자 중 대비(WCAG 명암비)가 높은 쪽을 고름
+function textOn(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#fff';
+  const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const n = parseInt(m[1], 16);
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  const dark = 0.0137; // #1b1f29 의 밝기
+  return (1.05) / (L + 0.05) >= (L + 0.05) / (dark + 0.05) ? '#ffffff' : '#1b1f29';
+}
 
 function rangeFor(view, sel) {
   if (view === 'day') return { start: sel, days: 1 };
@@ -122,6 +134,8 @@ async function load() {
           return [];
         })
       : Promise.resolve([]);
+    // 내 캘린더 색은 처음 한 번만 받아 옴 (실패하면 기본 파랑)
+    if (state.calColor === undefined) state.calColor = await call(cal.calendarColor).catch(() => null);
     const [events, hols] = await Promise.all([call(cal.list, timeMin, timeMax), holidayReq]);
     if (my !== state.loading) return; // 더 최근 요청이 있으면 버림
     state.events = events;
@@ -208,7 +222,10 @@ function connectBanner() {
 function chip(ev) {
   const c = el('div', 'chip' + (ev.allDay ? '' : ' timed'), (ev.allDay ? '' : ev.startTime + ' ') + ev.title);
   c.style.setProperty('--c', colorOf(ev));
-  if (ev.allDay) c.style.background = colorOf(ev);
+  if (ev.allDay) {
+    c.style.background = colorOf(ev);
+    c.style.setProperty('--chip-fg', textOn(colorOf(ev)));
+  }
   c.title = `${ev.title}\n${timeText(ev, ev.startDate)}`;
   c.onclick = (e) => { e.stopPropagation(); openEvent(ev); };
   return c;
@@ -244,7 +261,12 @@ function renderMonth(view) {
     cell.append(head);
     cell.onclick = () => setSel(day);
     cell.ondblclick = () => openEvent(null, day);
-    cell.title = '두 번 클릭하면 일정 추가';
+    cell.title = '두 번 클릭하면 일정 추가 (키보드: Enter 선택, Shift+Enter 추가)';
+    cell.tabIndex = 0;
+    cell.onkeydown = (e) => {
+      if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); openEvent(null, day); }
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel(day); }
+    };
     grid.append(cell);
     cells.push([cell, day]);
   }
@@ -254,9 +276,10 @@ function renderMonth(view) {
 
   // 칸 높이에 맞춰 보이는 일정 수 결정
   const h = cells[0][0].clientHeight;
-  const max = Math.max(1, Math.floor((h - 20) / 15));
+  const max = Math.max(1, Math.floor((h - 24) / 17));
   for (const [cell, day] of cells) {
     const list = eventsOn(day);
+    cell.classList.toggle('no-ev', !list.length && !holidaysOn(day).length);
     const show = Math.min(list.length, max);
     list.slice(0, show).forEach((ev) => cell.append(chip(ev)));
     // 못 보여 준 개수는 날짜 숫자 옆에 표시
@@ -290,6 +313,11 @@ function dayList(container, day) {
     if (ev.description && state.view !== 'month') body.append(el('div', 'desc', ev.description));
     row.append(body);
     row.onclick = () => openEvent(ev);
+    row.title = `${ev.title}\n${timeText(ev, day)}`;
+    row.tabIndex = 0;
+    row.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEvent(ev); }
+    };
     container.append(row);
   }
 }
@@ -602,6 +630,7 @@ document.addEventListener('keydown', (e) => {
   if (typeof stickerKeydown === 'function' && stickerKeydown(e)) return;
   if (e.key === 'Escape' && !$('#decorPanel').classList.contains('hidden')) return $('#decorPanel').classList.add('hidden');
   if (dlg.open || $('#settingsDlg').open || e.target.matches('input, textarea, select')) return;
+  if (e.target.closest?.('.cell, .ev')) return; // 날짜 칸·일정에 포커스가 있을 땐 방향키로 달이 넘어가지 않게
   if (e.key === 'ArrowLeft') step(-1);
   else if (e.key === 'ArrowRight') step(1);
   else if (e.key === 'F5') load();

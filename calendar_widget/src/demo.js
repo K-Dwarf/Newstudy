@@ -5,9 +5,9 @@ const { toGoogleBody, fromGoogleEvent, ymd, addDays } = require('./eventFormat')
 let seq = 1;
 const events = new Map();
 
-function add(body) {
+function add(body, colorId) {
   const id = 'demo' + seq++;
-  const ev = { id, htmlLink: null, ...body };
+  const ev = { id, htmlLink: null, ...body, ...(colorId ? { colorId: String(colorId) } : {}) };
   events.set(id, ev);
   return ev;
 }
@@ -26,17 +26,18 @@ function seed() {
         endTime: end || '',
         reminder: extra.reminder ?? 'default',
       }),
+      extra.colorId,
     );
   make('주간 사례회의', 0, '10:00', '11:00', { description: '3층 회의실' });
   make('어르신 생신잔치 준비', 0, '14:00', '15:30');
-  make('보조금 정산 마감', 2, null, null, { reminder: 1440 });
-  make('자원봉사자 교육', 3, '13:00', '17:00');
+  make('보조금 정산 마감', 2, null, null, { reminder: 1440, colorId: 11 });
+  make('자원봉사자 교육', 3, '13:00', '17:00', { colorId: 3 });
   make('가정방문 (김○○님)', -2, '15:00', '16:00');
-  make('연말 행사 주간', 7, null, null, { days: 2 });
+  make('연말 행사 주간', 7, null, null, { days: 2, colorId: 2 });
   make('운영위원회', 9, '16:00', '17:30');
   make('건강검진', 12, '09:00', '10:00', { reminder: 60 });
   make('팀 회식', 12, '18:30', '20:30');
-  make('월간 보고서 제출', 12, null, null);
+  make('월간 보고서 제출', 12, null, null, { colorId: 5 });
   make('물품 구매 요청', 12, '11:00', '11:30');
 }
 seed();
@@ -45,6 +46,7 @@ let connected = true;
 
 module.exports = {
   parseClientJson: () => ({ clientId: 'demo', clientSecret: 'demo' }),
+  calendarColor: async () => null,
   status: () => ({ mode: 'demo', canEncrypt: true, hasClient: true, connected, holidayScope: connected }),
   // 테스트용 공휴일: 날짜가 매년 같은 양력 공휴일만 넣음 (음력 공휴일·대체공휴일은 실제 연결 시 구글에서 받아옴)
   async listHolidays(timeMin, timeMax) {

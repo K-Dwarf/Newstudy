@@ -283,6 +283,17 @@ async function listHolidays(timeMin, timeMax) {
   return out;
 }
 
+// 내 기본 캘린더의 색 (구글 캘린더에서 정한 색). 일정에 색을 따로 안 정했을 때 이 색을 씀
+async function calendarColor() {
+  if (!status().holidayScope) return null; // 캘린더 보기 권한이 있어야 읽을 수 있음
+  try {
+    const d = await api('GET', 'https://www.googleapis.com/calendar/v3/users/me/calendarList/primary');
+    return /^#[0-9a-f]{6}$/i.test(d.backgroundColor || '') ? d.backgroundColor : null;
+  } catch {
+    return null;
+  }
+}
+
 // 새로 만들 때는 null 항목을 뺌 (null 은 수정(PATCH) 때 "종일↔시간" 전환을 위해서만 필요)
 function stripNulls(obj) {
   return JSON.parse(JSON.stringify(obj, (_k, v) => (v === null ? undefined : v)));
@@ -309,6 +320,7 @@ module.exports = {
   logout,
   listEvents,
   listHolidays,
+  calendarColor,
   createEvent,
   updateEvent,
   deleteEvent,

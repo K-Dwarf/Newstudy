@@ -43,6 +43,7 @@ function prefs() {
     opacity: Number(s.opacity) || 1,
     bgOpacity: Number.isFinite(Number(s.bgOpacity)) ? Number(s.bgOpacity) : 0.92,
     showHolidays: s.showHolidays !== false,
+    readable: s.readable !== false,
     pinDesktop: pinned,
     pinSupported: pin.supported(),
     autostart: app.getLoginItemSettings().openAtLogin,
@@ -245,6 +246,7 @@ handle('cal:importClient', async () => {
 handle('cal:login', () => backend.login());
 handle('cal:logout', () => backend.logout());
 handle('cal:list', (timeMin, timeMax) => backend.listEvents(String(timeMin), String(timeMax)));
+handle('cal:calendarColor', () => backend.calendarColor());
 handle('cal:holidays', (timeMin, timeMax) => backend.listHolidays(String(timeMin), String(timeMax)));
 handle('cal:create', (input) => backend.createEvent(input));
 handle('cal:update', (id, input) => backend.updateEvent(String(id), input));
@@ -279,6 +281,7 @@ handle('win:bgOpacity', (v) => {
   store.saveSettings({ bgOpacity: Number.isFinite(o) ? o : 0.92 });
   return o;
 });
+handle('app:setReadable', (on) => store.saveSettings({ readable: !!on }).readable);
 handle('win:resizeTo', (w, h) => {
   const area = screen.getDisplayMatching(win.getBounds()).workArea;
   const width = Math.round(Math.min(area.width, Math.max(MIN_W, Number(w) || MIN_W)));
